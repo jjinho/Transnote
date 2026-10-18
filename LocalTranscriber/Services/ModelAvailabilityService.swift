@@ -4,8 +4,8 @@ final class ModelAvailabilityService: @unchecked Sendable {
     private let modelsRoot: URL
     private let fileManager: FileManager
 
-    // 毎回の再帰走査を避けるためのインメモリインデックス。
-    // モデルフォルダが変わった場合に備え、TTL（30秒）で再構築する。
+    // In-memory index to avoid a recursive scan every time.
+    // Rebuilt after a TTL (30 seconds) in case the model folder changes.
     private let cacheLock = NSLock()
     private var cachedIndex: IndexEntry?
 
@@ -45,7 +45,7 @@ final class ModelAvailabilityService: @unchecked Sendable {
                 candidateCount = 1
             } else if score == bestScore, let current = bestMatch {
                 candidateCount += 1
-                // 同スコア時は更新日時が新しい方を優先し、同一日時は名前→パスの昇順で決定的に決める
+                // On tied scores, prefer the most recently modified; for identical times, decide deterministically by name, then path, ascending
                 if isPreferredOver(url, current: current) {
                     bestMatch = url
                 }
@@ -54,21 +54,21 @@ final class ModelAvailabilityService: @unchecked Sendable {
 
         if let bestMatch, candidateCount > 1 {
             AppLogger.info(
-                "複数のモデルフォルダを検出したため候補 \(candidateCount) 件のうち '\(bestMatch.lastPathComponent)' を選択しました（スコア: \(bestScore)）"
+                "Found multiple model folders; selected '\(bestMatch.lastPathComponent)' out of \(candidateCount) candidates (score: \(bestScore))"
             )
         }
 
         return bestMatch
     }
 
-    /// variant 名に一致するディレクトリを再帰的に列挙する（ファイルの存在・サイズ検証は行わない）。
-    /// ダウンロード失敗時のクリーンアップで、ダウンロード前に存在したフォルダを特定するために使う。
-    /// - Parameter includingHidden: `true` のとき HuggingFace の `.cache` 等も列挙する。
-    ///   モデル選択では不完全なステージング領域を除外し、失敗時クリーンアップでは残渣を消せるよう含める。
+    /// Recursively enumerates directories matching the variant name (does not verify file existence or size).
+    /// Used during download-failure cleanup to identify folders that existed before the download.
+    /// - Parameter includingHidden: When `true`, also enumerates HuggingFace's `.cache` and similar.
+    ///   Model selection excludes incomplete staging areas; failure cleanup includes them so leftovers can be removed.
     func variantDirectories(named whisperKitModelName: String, includingHidden: Bool = false) -> [URL] {
-        // 初回またはTTL経過時のみ再帰走査し、以後はキャッシュを利用する。
-        // includingHidden はダウンロード失敗時のクリーンアップで必要になるため、
-        // その場合はキャッシュを無視して直接走査する。
+        // Recursively scan only the first time or after the TTL expires; use the cache afterward.
+        // includingHidden is needed for download-failure cleanup,
+        // so in that case the cache is ignored and the scan is done directly.
         let allDirectories: [URL]
         if includingHidden {
             allDirectories = scanVariantDirectories(includingHidden: true)
@@ -89,7 +89,7 @@ final class ModelAvailabilityService: @unchecked Sendable {
         return allDirectories.filter { matchesVariant(url: $0, whisperKitModelName: whisperKitModelName) }
     }
 
-    /// モデルルート以下を再帰走査してバリアント候補ディレクトリを返す（キャッシュ用）。
+    /// Recursively scans under the model root and returns candidate variant directories (for caching).
     private func scanVariantDirectories(includingHidden: Bool) -> [URL] {
         guard fileManager.fileExists(atPath: modelsRoot.path) else { return [] }
 
@@ -112,7 +112,7 @@ final class ModelAvailabilityService: @unchecked Sendable {
         hasRequiredModelFilesDirectly(in: folder)
     }
 
-    /// 指定モデルの使用ディスク容量（バイト）を返す。未ダウンロードの場合は 0。
+    /// Returns the disk usage in bytes of the given model. 0 if not downloaded.
     func diskUsage(whisperKitModelName: String) -> Int64 {
         guard let folder = modelFolder(for: whisperKitModelName) else { return 0 }
         return directorySize(in: folder)
@@ -126,7 +126,7 @@ final class ModelAvailabilityService: @unchecked Sendable {
         return isDirectory.boolValue
     }
 
-    /// HuggingFace のダウンロードステージング領域（.cache 等）に当たる隠しパスかどうかを判定する。
+    /// Determines whether a path is a hidden path in HuggingFace's download staging area (.cache, etc.).
     private func hasHiddenPathComponent(_ url: URL) -> Bool {
         url.pathComponents.contains { $0.hasPrefix(".") }
     }
@@ -161,9 +161,9 @@ final class ModelAvailabilityService: @unchecked Sendable {
         return 0
     }
 
-    /// 同スコアの候補同士の比較。更新日時が新しい方を優先し、同一日時は名前、
-    /// さらに同一名なら正規化パスの昇順で決定的に決める。
-    /// 更新日時を取得できない場合も名前→パスで比較し、列挙順に依存しない。
+    /// Compares candidates with tied scores. Prefers the most recently modified; for identical times, compares by name,
+    /// and for identical names, by normalized path ascending, so the result is deterministic.
+    /// If the modification date cannot be obtained, still compares by name, then path, independent of enumeration order.
     private func isPreferredOver(_ newCandidate: URL, current: URL) -> Bool {
         let newDate = modificationDate(of: newCandidate)
         let currentDate = modificationDate(of: current)
@@ -185,8 +185,8 @@ final class ModelAvailabilityService: @unchecked Sendable {
         (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
     }
 
-    /// WhisperKit は modelFolder 直下の .mlmodelc を参照するため、再帰検索は使わない。
-    /// 途中失敗で 0バイトのまま残ったファイルは「不完全」としてダウンロード済みとみなさない。
+    /// WhisperKit references the .mlmodelc files directly under modelFolder, so recursive search is not used.
+    /// Files left at 0 bytes by a failed download are "incomplete" and are not considered downloaded.
     private func hasRequiredModelFilesDirectly(in folder: URL) -> Bool {
         Self.requiredModelNames.allSatisfy { name in
             let compiled = folder.appendingPathComponent("\(name).mlmodelc")
@@ -196,10 +196,10 @@ final class ModelAvailabilityService: @unchecked Sendable {
         }
     }
 
-    /// モデルファイルが存在し、かつ中身がある（＝正常にダウンロードされた）かどうかを返す。
-    /// - `.mlmodelc` / `.mlpackage` はファイルの場合もディレクトリ（バンドル）の場合もある。
-    /// - ファイルは 0 バイトなら不完全。ディレクトリは inode サイズが常に 0 超のため、
-    ///   子エントリが 1 つ以上あることまで確認する。
+    /// Returns whether the model file exists and has content (i.e., was downloaded successfully).
+    /// - `.mlmodelc` / `.mlpackage` can be either a file or a directory (bundle).
+    /// - A file is incomplete if it is 0 bytes. A directory's inode size is always greater than 0,
+    ///   so also confirm it has at least one child entry.
     private func isValidModelFile(at url: URL) -> Bool {
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
@@ -207,8 +207,8 @@ final class ModelAvailabilityService: @unchecked Sendable {
         }
 
         if isDirectory.boolValue {
-            // コンパイル済みモデル（.mlmodelc）は coremldata.bin または model.mil を、
-            // .mlpackage は Data/com.apple.CoreML/Model.mil を持つ。単なる空ディレクトリでは不十分。
+            // A compiled model (.mlmodelc) has coremldata.bin or model.mil;
+            // a .mlpackage has Data/com.apple.CoreML/Model.mil. A merely empty directory is not enough.
             let coreMLBinary = url.appendingPathComponent("coremldata.bin")
             let milFile = url.appendingPathComponent("model.mil")
             let packageMil = url.appendingPathComponent("Data").appendingPathComponent("com.apple.CoreML").appendingPathComponent("Model.mil")
@@ -216,8 +216,8 @@ final class ModelAvailabilityService: @unchecked Sendable {
                 || fileManager.fileExists(atPath: milFile.path)
                 || fileManager.fileExists(atPath: packageMil.path)
 
-            // Web 上の一般モデルは .mlpackage でなく .mlmodelc 中心だが、いずれの場合も
-            // 中身の実体（128KB 以上）を持つことを要求する。
+            // Typical models on the web are mostly .mlmodelc rather than .mlpackage, but in either case
+            // require real content (128 KB or more).
             guard hasCoreMLPayload || directorySize(in: url) > 128 * 1024 else {
                 return false
             }
@@ -229,7 +229,7 @@ final class ModelAvailabilityService: @unchecked Sendable {
         return (size?.intValue ?? -1) > 0
     }
 
-    /// ディレクトリ配下の合計サイズをバイトで返す（整合性検証の補助）。
+    /// Returns the total size in bytes under the directory (helper for integrity verification).
     private func directorySize(in directory: URL) -> Int64 {
         let keys: Set<URLResourceKey> = [.isRegularFileKey, .fileSizeKey]
         guard let enumerator = fileManager.enumerator(

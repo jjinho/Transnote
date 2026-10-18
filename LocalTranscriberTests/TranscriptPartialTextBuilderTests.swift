@@ -42,7 +42,7 @@ final class TranscriptPartialTextBuilderTests: XCTestCase {
 
     // MARK: - Differential tests (legacy [String] impl vs new String impl)
 
-    /// 旧実装のインライン復元。新実装と挙動同一を検証するために使用。
+    /// Inline reconstruction of the old implementation. Used to verify behavioral equivalence with the new one.
     private func legacyAppend(from segmentTexts: [String], to accumulated: inout [String]) -> String? {
         let windowText = TranscriptPartialTextBuilder.joinedPresentableText(from: segmentTexts)
         guard !windowText.isEmpty else { return nil }
@@ -69,7 +69,7 @@ final class TranscriptPartialTextBuilderTests: XCTestCase {
     }
 
     func testDifferential_MultiSegment_Window() {
-        // 1 ウィンドウに複数セグメントを含むケース
+        // Case with multiple segments in one window
         let windowInputs: [[String]] = [
             ["第一段", "第二段"],
             ["<|startoftranscript|><|ja|>第三段", "第四段"],

@@ -16,8 +16,8 @@ actor WhisperKitTranscriber: Transcriber {
         _ job: TranscriptionJob,
         progressHandler: (@Sendable (TranscriptionProgressUpdate) -> Void)? = nil
     ) async throws -> Transcript {
-        // 同一 WhisperKit インスタンスでの並列 transcribe は禁止する。
-        // activeTasks が非空なら新しいジョブを拒否する。
+        // Parallel transcribe calls on the same WhisperKit instance are not allowed.
+        // Reject new jobs if activeTasks is non-empty.
         let alreadyActive = !activeTasks.isEmpty
         guard !alreadyActive else {
             throw AppError.transcriptionFailed(
@@ -52,7 +52,7 @@ actor WhisperKitTranscriber: Transcriber {
         do {
             try Task.checkCancellation()
 
-            // RTF（Real-Time Factor）計測: 処理時間 / 音声長。
+            // RTF (Real-Time Factor) measurement: processing time / audio duration.
             let measurementStart = Date()
             let audioDuration = try? await AVURLAsset(url: job.audioFileURL).load(.duration).seconds
 
@@ -96,14 +96,14 @@ actor WhisperKitTranscriber: Transcriber {
                         partialText: partialText
                     )
                 )
-                // 途中結果をディスクへチェックポイント保存（クラッシュ・終了時の復旧用）
+                // Checkpoint intermediate results to disk (for recovery after a crash or quit)
                 self.saveCheckpoint(text: partialText, for: job)
             }
             defer {
                 whisperKit.segmentDiscoveryCallback = nil
             }
 
-            // 長時間音声はチャンク単位で処理する（WhisperKit への一度の投入を避ける）。
+            // Process long audio in chunks (to avoid feeding it to WhisperKit all at once).
             let chunks = await splitAudioIntoChunks(url: job.audioFileURL, chunkDuration: job.chunkDuration)
             var allResults: [TranscriptionResult] = []
             var processedSeconds: TimeInterval = 0
@@ -128,7 +128,7 @@ actor WhisperKitTranscriber: Transcriber {
                                 modelDisplayName: job.modelDisplayName
                             )
                         )
-                        // キャンセル時は false を返し、WhisperKit の内部処理を即時停止させる。
+                        // On cancellation, return false so WhisperKit stops its internal processing immediately.
                         return !Task.isCancelled
                     }
                 )
@@ -143,7 +143,7 @@ actor WhisperKitTranscriber: Transcriber {
                 .make(phase: .finished, fraction: 1.0, modelDisplayName: job.modelDisplayName)
             )
 
-            // RTF をログ・診断情報として記録する。
+            // Record RTF as log and diagnostic information.
             let elapsed = Date().timeIntervalSince(measurementStart)
             if let duration = audioDuration, duration > 0 {
                 let rtf = elapsed / duration
@@ -249,14 +249,14 @@ actor WhisperKitTranscriber: Transcriber {
         return try await WhisperKit(config)
     }
 
-    /// WhisperKit が言語コードを明示指定できる言語（ISO 639-1）。
-    /// ここに含まれない ID は自動検出（detectLanguage）にフォールバックする。
+    /// Languages for which WhisperKit can be given an explicit language code (ISO 639-1).
+    /// IDs not included here fall back to automatic detection (detectLanguage).
     private static let explicitLanguageIDs: Set<String> = [
         "ja", "en", "zh", "ko", "fr", "de", "es", "it", "pt", "ru"
     ]
 
-    /// 途中結果をディスクへチェックポイント保存する。
-    /// クラッシュ・アプリ終了時に、このファイルから再開・復旧できる。
+    /// Checkpoints intermediate results to disk.
+    /// After a crash or app quit, processing can resume and recover from this file.
     private func saveCheckpoint(text: String, for job: TranscriptionJob) {
         guard !text.isEmpty else { return }
         let directory = AppDirectories.checkpointDirectory
@@ -274,8 +274,8 @@ actor WhisperKitTranscriber: Transcriber {
     }
 
 
-    /// 長時間音声を指定チャンク長で分割して一時ファイルを返す。
-    /// 分割不要（既にチャンク長以下）の場合は元ファイルを返す。
+    /// Splits long audio into the given chunk length and returns temporary files.
+    /// Returns the original file if splitting is unnecessary (already within the chunk length).
     private func splitAudioIntoChunks(url: URL, chunkDuration: TimeInterval) async -> [URL] {
         guard chunkDuration > 0 else { return [url] }
         let asset = AVURLAsset(url: url)

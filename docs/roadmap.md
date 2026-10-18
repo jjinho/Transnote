@@ -1,111 +1,111 @@
-# ロードマップ
+# Roadmap
 
-## 実装フェーズ
+## Implementation phases
 
-### Phase 1: 最小 CLI / サービス検証
+### Phase 1: Minimal CLI / service validation
 
-GUI より先に、Swift コードから WhisperKit を呼び出して文字起こしできるか確認する。
+Before building the GUI, confirm that WhisperKit can be called from Swift code to transcribe audio.
 
-やること:
+Tasks:
 
 ```text
-- Xcodeプロジェクト作成
-- Swift PackageでWhisperKit追加
-- サンプル音声を1つ文字起こし
-- fullText取得
-- segment情報取得可否確認
-- Tiny / Base / Large系で速度比較
+- Create the Xcode project
+- Add WhisperKit via Swift Package
+- Transcribe one sample audio file
+- Get fullText
+- Check whether segment information is available
+- Compare speed across Tiny / Base / Large variants
 ```
 
-完了条件:
+Done when:
 
 ```text
-- ローカル音声ファイルをSwiftから文字起こしできる
-- モデル指定ができる
-- 日本語音声で実用レベルの結果が出る
-- 失敗時のエラー内容を取得できる
+- A local audio file can be transcribed from Swift
+- A model can be specified
+- Japanese audio produces practically usable results
+- Error details can be obtained on failure
 ```
 
 ### Phase 2: GUI MVP
 
-次に SwiftUI 画面を作る。
+Next, build the SwiftUI screens.
 
-やること:
-
-```text
-- メインウィンドウ作成
-- ファイル選択
-- ドラッグ&ドロップ
-- モデル選択
-- 言語選択
-- 文字起こし開始
-- 結果表示
-- キャンセル
-```
-
-この時点では、履歴や複雑なモデル管理はまだ入れない。
-
-完了条件:
+Tasks:
 
 ```text
-- ファイルを選んでボタンを押すと文字起こしできる
-- 処理中にUIが固まらない
-- キャンセルできる
-- 文字起こし結果をコピーできる
+- Create the main window
+- File selection
+- Drag & drop
+- Model selection
+- Language selection
+- Start transcription
+- Display results
+- Cancel
 ```
 
-### Phase 3: エクスポート
+History and complex model management are not added yet at this stage.
 
-やること:
+Done when:
 
 ```text
-- TXT出力
-- Markdown出力
-- JSON出力
-- SRT出力
-- VTT出力
+- Choosing a file and pressing a button transcribes it
+- The UI does not freeze during processing
+- Processing can be cancelled
+- The transcript can be copied
 ```
 
-完了条件:
+### Phase 3: Export
+
+Tasks:
 
 ```text
-- セグメント単位のタイムスタンプ付き字幕を保存できる
-- 保存先をユーザーが選べる
-- 保存失敗時にわかりやすいエラーを出せる
+- TXT export
+- Markdown export
+- JSON export
+- SRT export
+- VTT export
 ```
 
-### Phase 4: モデル管理
-
-ここでアプリらしくする。
-
-やること:
+Done when:
 
 ```text
-- モデル未準備状態の表示
-- 初回ダウンロード導線
-- ダウンロード進捗
-- モデル削除
-- 推奨モデル表示
-- 空き容量チェック
+- Subtitles with segment-level timestamps can be saved
+- The user can choose the save location
+- Save failures produce clear error messages
 ```
 
-WhisperKit には Hugging Face からの自動モデルダウンロードやカスタムモデル対応が案内されている。([Mintlify][2]) ただし、商用・配布を見据えるなら、モデルのライセンス表記、保存先、削除導線はアプリ側で明示した方がよい。
+### Phase 4: Model management
 
-### Phase 5: 履歴・プロジェクト保存
+This is where it starts to feel like a real app.
 
-やること:
+Tasks:
 
 ```text
-- 文字起こし履歴
-- 元ファイル名
-- 生成日時
-- 使用モデル
-- 言語
-- 出力済み形式
-- 編集済み本文
+- Show the model-not-ready state
+- First-time download flow
+- Download progress
+- Model deletion
+- Recommended model display
+- Free disk space check
 ```
 
-保存場所:
+WhisperKit documents automatic model downloads from Hugging Face and support for custom models. ([Mintlify][2]) However, with commercial use and distribution in mind, the app should make model license notices, storage location, and deletion explicit.
+
+### Phase 5: History and project storage
+
+Tasks:
+
+```text
+- Transcription history
+- Source file name
+- Creation date and time
+- Model used
+- Language
+- Formats exported
+- Edited text
+```
+
+Storage location:
 
 ```text
 ~/Library/Application Support/LocalTranscriber/
@@ -115,108 +115,108 @@ WhisperKit には Hugging Face からの自動モデルダウンロードやカ�
 └─ history.sqlite
 ```
 
-SwiftData を使うと実装は楽だが、将来的にデータ移行やバックアップを重視するなら SQLite 直叩き、または GRDB のような SQLite ラッパーも候補。MVP では SwiftData で十分。
+SwiftData makes implementation easy, but if data migration and backups become priorities, raw SQLite or an SQLite wrapper such as GRDB are also candidates. SwiftData is sufficient for the MVP.
 
-### Phase 6: 長時間音声対応
+### Phase 6: Long-audio support
 
-会議録アプリとして使うなら、このフェーズが重要。
+This phase is important if the app is used for meeting transcripts.
 
-やること:
+Tasks:
 
 ```text
-- 30分 / 60分 / 120分音声で検証
-- メモリ使用量の測定
-- 途中結果の保存
-- クラッシュ復旧
-- VADの有効化検討
-- 無音区間での幻聴対策
+- Validate with 30 / 60 / 120 minute audio
+- Measure memory usage
+- Save intermediate results
+- Crash recovery
+- Consider enabling VAD
+- Mitigate hallucinations during silence
 ```
 
-WhisperKit は VAD を機能として案内している。([Mintlify][2]) ただし MVP では VAD を最初から複雑に設定せず、まずは標準設定で動く状態を作り、その後に無音区間の精度問題を見て調整するのがよい。
+WhisperKit lists VAD as a feature. ([Mintlify][2]) However, rather than configuring VAD in detail from the start of the MVP, it is better to first get things working with default settings, then tune after looking at accuracy issues in silent stretches.
 
-### Phase 7: 配布
+### Phase 7: Distribution
 
-やること:
+Tasks:
 
 ```text
-- Releaseビルド
-- DMG作成
+- Release build
+- DMG creation
 - GitHub Actions release workflow
-- GitHub Releases への DMG 公開
-- GitHub Pages から releases/latest へ誘導
-- （任意）Developer ID署名とNotarization
+- Publish DMG to GitHub Releases
+- Direct users from GitHub Pages to releases/latest
+- (Optional) Developer ID signing and notarization
 ```
 
-完了条件:
+Done when:
 
 ```text
-- v*.*.* タグ push で Transnote-{version}.dmg が GitHub Releases に公開される
-- GitHub Pages にダウンロード導線とインストール案内がある
-- 未署名配布時は GitHub Secrets なしで workflow が動作する
+- Pushing a v*.*.* tag publishes Transnote-{version}.dmg to GitHub Releases
+- GitHub Pages has a download path and installation guide
+- With unsigned distribution, the workflow runs without GitHub Secrets
 ```
 
-現状は未署名 DMG を配布している。初回起動時に Gatekeeper の警告が出るため、インストール手順で右クリック → 開く を案内する。
+Unsigned DMGs are currently distributed. Because Gatekeeper shows a warning on first launch, the installation guide tells users to right-click → Open.
 
-将来、スムーズなインストール体験が必要になった場合は、Developer ID で署名し、Apple の Notarization に提出する流れを検討する。Apple は、Mac App Store 外で配布する Developer ID 署名ソフトウェアについて、公証により Gatekeeper がソフトウェアの改ざんや既知マルウェアでないことを確認できると説明している。([Apple Developer][4])
+If a smoother installation experience is needed in the future, consider signing with Developer ID and submitting to Apple's notarization service. Apple explains that for Developer ID–signed software distributed outside the Mac App Store, notarization lets Gatekeeper confirm the software has not been tampered with and is not known malware. ([Apple Developer][4])
 
-## 開発スケジュール案
+## Proposed development schedule
 
-|  期間 | 内容           | 成果物                               |
-| --: | ------------ | --------------------------------- |
-| 1週目 | WhisperKit検証 | Swiftから音声1本を文字起こし                 |
-| 2週目 | GUI MVP      | ファイル選択→文字起こし→表示                   |
-| 3週目 | 出力機能         | TXT / Markdown / JSON / SRT / VTT |
-| 4週目 | モデル管理        | モデルDL、選択、削除                       |
-| 5週目 | 履歴・設定        | 履歴、保存先、言語設定                       |
-| 6週目 | 長時間音声テスト     | 60分以上の音声で安定化                      |
-| 7週目 | 配布準備         | 未署名 DMG、GitHub Releases / Pages |
-| 8週目 | β版           | 実ユーザーテスト                          |
+|  Period | Scope                  | Deliverable                                  |
+| ------: | ---------------------- | -------------------------------------------- |
+|  Week 1 | WhisperKit validation  | Transcribe one audio file from Swift         |
+|  Week 2 | GUI MVP                | File selection → transcription → display     |
+|  Week 3 | Export                 | TXT / Markdown / JSON / SRT / VTT            |
+|  Week 4 | Model management       | Model download, selection, deletion          |
+|  Week 5 | History and settings   | History, save location, language setting     |
+|  Week 6 | Long-audio testing     | Stable with audio of 60 minutes or more      |
+|  Week 7 | Distribution prep      | Unsigned DMG, GitHub Releases / Pages        |
+|  Week 8 | Beta                   | Testing with real users                      |
 
-## v1 以降の拡張
+## Extensions after v1
 
-| 機能       | 優先度 | 実装方針                 |
-| -------- | --: | -------------------- |
-| 動画ファイル対応 |   高 | AVFoundationで音声抽出    |
-| リアルタイム録音 |   高 | WhisperKit streaming |
-| 話者分離     | 中〜高 | SpeakerKitを検討        |
-| 用語辞書     |   中 | 後処理で固有名詞補正           |
-| 字幕エディタ   |   中 | セグメント編集UI            |
-| 議事録化     |   中 | ローカルLLM or 手動テンプレ    |
-| メニューバー常駐 | 低〜中 | dictation用途向け        |
+| Feature                | Priority | Approach                              |
+| ---------------------- | -------: | ------------------------------------- |
+| Video file support     |     High | Extract audio with AVFoundation       |
+| Real-time recording    |     High | WhisperKit streaming                  |
+| Speaker diarization    | Med–High | Evaluate SpeakerKit                   |
+| Custom vocabulary      |   Medium | Correct proper nouns in post-processing |
+| Subtitle editor        |   Medium | Segment editing UI                    |
+| Meeting minutes        |   Medium | Local LLM or manual templates         |
+| Menu bar app           |  Low–Med | For dictation use                     |
 
-`argmax-oss-swift` には WhisperKit だけでなく SpeakerKit も含まれており、話者分離系の導線も公式 README にある。([GitHub][1]) ただし、話者分離は UI とデータ構造が一段複雑になるので、MVP 後に回すべき。
+`argmax-oss-swift` includes SpeakerKit as well as WhisperKit, and the official README covers speaker diarization too. ([GitHub][1]) However, diarization makes the UI and data structures considerably more complex, so it should wait until after the MVP.
 
-## 実装優先順位
+## Implementation priority
 
-最短で形にするなら、この順:
+The fastest path to something usable, in order:
 
 ```text
-1. WhisperKitをSwift Packageで追加
-2. 固定音声ファイルを文字起こし
-3. SwiftUIでファイル選択
-4. 文字起こし結果をTextEditorに表示
-5. TXT保存
-6. SRT / VTT保存
-7. モデル選択
-8. 履歴
-9. 長時間音声対応
-10. DMG配布
+1. Add WhisperKit via Swift Package
+2. Transcribe a fixed audio file
+3. File selection in SwiftUI
+4. Show the transcript in a TextEditor
+5. Save as TXT
+6. Save as SRT / VTT
+7. Model selection
+8. History
+9. Long-audio support
+10. DMG distribution
 ```
 
-## バージョン計画
+## Version plan
 
-このプロジェクトは、まず **SwiftUI + WhisperKit のみ** で進めるのが最もよい。
+The best approach for this project is to start with **SwiftUI + WhisperKit only**.
 
 ```text
-v0.1: ファイル選択 → 文字起こし → TXT保存
-v0.2: SRT / VTT / JSON、モデル選択
-v0.3: 履歴、設定、長時間音声対応
-v0.4: モデル管理、エラー処理強化
-v1.0: 配布導線の安定化（署名は任意）
-v1.1: 動画対応、話者分離、録音
+v0.1: File selection → transcription → save as TXT
+v0.2: SRT / VTT / JSON, model selection
+v0.3: History, settings, long-audio support
+v0.4: Model management, stronger error handling
+v1.0: Stabilized distribution flow (signing optional)
+v1.1: Video support, speaker diarization, recording
 ```
 
-Python や Rust は、現段階では入れない方がよい。**Swift だけで MVP を作り、WhisperKit の限界が見えた時点で Rust / whisper.cpp バックエンドを追加検討**するのが堅実。
+Python and Rust are better left out at this stage. The sound approach is to **build the MVP in Swift alone, and consider adding a Rust / whisper.cpp backend once WhisperKit's limits become clear**.
 
 [1]: https://github.com/argmaxinc/argmax-oss-swift "GitHub - argmaxinc/argmax-oss-swift: On-device Speech AI for Apple Silicon · GitHub"
 [2]: https://www.mintlify.com/explore/argmaxinc/WhisperKit "WhisperKit Documentation - WhisperKit"

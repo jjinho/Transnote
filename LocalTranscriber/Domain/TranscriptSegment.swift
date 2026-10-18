@@ -35,18 +35,22 @@ struct TranscriptSegment: Codable, Identifiable, Sendable {
         return String(format: "%02d:%02d:%02d\(separator)%03d", hours, minutes, seconds, milliseconds)
     }
 
+    /// Spells out durations (e.g. "1 minute, 5 seconds") for VoiceOver. Leading zero units are dropped,
+    /// matching the earlier hand-built format. Uses the app's active localization rather than the system
+    /// region so the spoken duration matches the UI language.
+    private static let accessibilityDurationFormatter: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .full
+        formatter.allowedUnits = [.hour, .minute, .second]
+        formatter.zeroFormattingBehavior = .dropLeading
+        var calendar = Calendar.current
+        calendar.locale = Bundle.main.preferredLocalizations.first.map(Locale.init(identifier:)) ?? .current
+        formatter.calendar = calendar
+        return formatter
+    }()
+
     private static func formatAccessibilityTimestamp(_ time: TimeInterval) -> String {
         let totalSeconds = max(0, Int(time.rounded(.down)))
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let seconds = totalSeconds % 60
-
-        if hours > 0 {
-            return String(format: "%d時間%d分%d秒", hours, minutes, seconds)
-        }
-        if minutes > 0 {
-            return String(format: "%d分%d秒", minutes, seconds)
-        }
-        return String(format: "%d秒", seconds)
+        return accessibilityDurationFormatter.string(from: TimeInterval(totalSeconds)) ?? "\(totalSeconds)"
     }
 }

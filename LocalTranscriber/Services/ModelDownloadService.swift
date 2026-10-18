@@ -16,7 +16,7 @@ struct ModelDownloadService: Sendable {
         self.fileManager = fileManager
     }
 
-    /// 指定ディレクトリにモデルが存在すればそのパスを返し、なければダウンロードする。
+    /// Returns the model's path if it exists in the given directory; otherwise downloads it.
     func downloadIfNeeded(
         whisperKitModelName: String,
         modelDisplayName: String?,
@@ -37,13 +37,13 @@ struct ModelDownloadService: Sendable {
         )
     }
 
-    /// モデルダウンロードに必要な空き容量（5GB）を確保できているか検査する。
-    /// 不足時は AppError.fileTooLarge ではなく専用エラーで通知する。
+    /// Checks whether the free space needed for a model download (5 GB) is available.
+    /// When insufficient, reports a dedicated error rather than AppError.fileTooLarge.
     private func ensureEnoughDiskSpace() throws {
         let resourceValues = try? modelsRoot.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
         guard let available = resourceValues?.volumeAvailableCapacityForImportantUsage,
               available > 0 else {
-            // 容量を取得できない場合は検査をスキップ（非ブロッキング）
+            // Skip the check if the capacity cannot be obtained (non-blocking)
             AppLogger.info("Could not determine free disk space; skipping check", logger: AppLogger.transcription)
             return
         }
@@ -59,8 +59,8 @@ struct ModelDownloadService: Sendable {
         }
     }
 
-    /// 指定モデルのダウンロード済みフォルダを削除する。
-    /// モデルが未ダウンロードの場合は何もしない。
+    /// Deletes the downloaded folder of the given model.
+    /// Does nothing if the model has not been downloaded.
     func deleteModel(whisperKitModelName: String) throws {
         guard let folder = modelAvailability.modelFolder(for: whisperKitModelName) else {
             return
@@ -76,7 +76,7 @@ struct ModelDownloadService: Sendable {
     ) async throws -> URL {
         AppDirectories.ensureDirectoriesExist()
 
-        // ダウンロード前に空き容量を検査する（モデル最低サイズの目安として 5GB 未満なら中止）。
+        // Check free space before downloading (abort if under 5 GB, a rough minimum model size).
         try ensureEnoughDiskSpace()
 
         AppLogger.info("Downloading model: \(whisperKitModelName)", logger: AppLogger.transcription)
@@ -84,9 +84,9 @@ struct ModelDownloadService: Sendable {
             .make(phase: .downloadingModel, fraction: 0, modelDisplayName: modelDisplayName)
         )
 
-        // WhisperKit.download は throw すると保存先 (modelsRoot) に途中生成されたフォルダが残る。
-        // 「ダウンロード前に存在したフォルダ」を控えておき、失敗時は「今回新規に生成されたフォルダ」だけを
-        // 削除する（既存モデルを誤って消さないためのセーフガード）。
+        // If WhisperKit.download throws, partially created folders remain in the destination (modelsRoot).
+        // Record the "folders that existed before the download", and on failure delete only the "folders newly created
+        // by this download" (a safeguard against accidentally deleting existing models).
         let directoriesBeforeDownload = Set(
             modelAvailability.variantDirectories(
                 named: whisperKitModelName,
@@ -94,7 +94,7 @@ struct ModelDownloadService: Sendable {
             ).map { $0.path }
         )
 
-        // ネットワーク失敗時に指数バックオフで再試行する（最大3回、待機 1s / 2s / 4s）。
+        // Retry with exponential backoff on network failures (up to 3 times, waiting 1s / 2s / 4s).
         let maxAttempts = 3
         var attempt = 0
         var lastError: Error?
@@ -106,7 +106,7 @@ struct ModelDownloadService: Sendable {
                     variant: whisperKitModelName,
                     downloadBase: modelsRoot,
                     progressCallback: { progress in
-                        // 再開状態: 既に一部ダウンロード済みの場合は「キャッシュから再開中」を表示する
+                        // Resume state: if part of the download already exists, show "Resuming from cache"
                         let resumeState = (progress.completedUnitCount ?? 0) > 0
                             ? NSLocalizedString("キャッシュから再開中", comment: "Resuming download")
                             : nil
@@ -124,7 +124,7 @@ struct ModelDownloadService: Sendable {
                 break
             } catch {
                 lastError = error
-                // ネットワーク系エラーのみ再試行する
+                // Retry only network errors
                 guard isRetryableNetworkError(error), attempt < maxAttempts else {
                     throw error
                 }
@@ -135,11 +135,19 @@ struct ModelDownloadService: Sendable {
         }
 
         guard let path = downloadedPath else {
-            throw lastError ?? AppError.transcriptionFailed("モデルのダウンロードに失敗しました。")
+            throw lastError ?? AppError.transcriptionFailed(
+                NSLocalizedString("モデルのダウンロードに失敗しました。", comment: "Model download failed")
+            )
         }
         guard modelAvailability.validateModelFolder(path) else {
             throw AppError.transcriptionFailed(
-                "モデルのダウンロードは完了しましたが、ファイル構成が不正です: \(path.path)"
+                String(
+                    format: NSLocalizedString(
+                        "モデルのダウンロードは完了しましたが、ファイル構成が不正です: %@",
+                        comment: "Downloaded model has invalid file structure"
+                    ),
+                    path.path
+                )
             )
         }
 
@@ -147,7 +155,7 @@ struct ModelDownloadService: Sendable {
         return path
     }
 
-    /// 再試行すべきネットワーク系エラーかどうかを判定する。
+    /// Determines whether an error is a network error that should be retried.
     private func isRetryableNetworkError(_ error: Error) -> Bool {
         if let urlError = error as? URLError {
             switch urlError.code {
@@ -159,16 +167,16 @@ struct ModelDownloadService: Sendable {
                 return false
             }
         }
-        // WhisperKit が投げる汎用エラーのうち、ネットワーク系の文言のみ再試行する
+        // Of the generic errors WhisperKit throws, retry only those with network-related wording
         let description = (error as NSError).localizedDescription.lowercased()
         return description.contains("network")
             || description.contains("connection")
             || description.contains("timeout")
     }
 
-    /// ダウンロード失敗時に、そのダウンロードが新規に生成した variant フォルダ（部分ダウンロード）を削除する。
-    /// 削除対象は「事前に存在しなかった」フォルダのみで、既存モデルには影響しない。
-    /// テスト容易性のため internal メソッドとして切り出している。
+    /// On download failure, deletes the variant folders (partial downloads) newly created by that download.
+    /// Only folders that "did not exist beforehand" are deleted; existing models are unaffected.
+    /// Extracted as an internal method for testability.
     func cleanUpFailedDownload(
         whisperKitModelName: String,
         directoriesBeforeDownload: Set<String>

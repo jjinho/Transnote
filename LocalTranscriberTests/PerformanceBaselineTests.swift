@@ -2,10 +2,10 @@ import XCTest
 import WhisperKit
 @testable import LocalTranscriber
 
-/// 調査用の速度計測プローブ（回帰テスト／閾値アサーションではない）。
-/// - 結果は print するだけで、環境差に依存する閾値は設けない
-/// - テスト用 wav が無い環境（CI 含む）では XCTSkip する
-/// - ローカル絶対パスは開発マシン上の DerivedData 探索用のフォールバック
+/// Investigative speed-measurement probe (not a regression test or threshold assertion).
+/// - Results are only printed; no environment-dependent thresholds are set
+/// - Skipped with XCTSkip in environments without the test wav (including CI)
+/// - The local absolute path is a fallback for locating DerivedData on the development machine
 final class PerformanceBaselineTests: XCTestCase {
 
     private let modelsRoot = AppDirectories.modelsDirectory
@@ -14,7 +14,7 @@ final class PerformanceBaselineTests: XCTestCase {
     private var longAudioURL: URL?
 
     override func setUpWithError() throws {
-        // WhisperKit リポジトリ内のテスト用 wav を探す（相対パス優先）
+        // Look for the test wav in the WhisperKit repository (relative paths first)
         let candidates = [
             URL(fileURLWithPath: "DerivedData/SourcePackages/checkouts/argmax-oss-swift/Tests/WhisperKitTests/Resources/ja_test_clip.wav"),
             URL(fileURLWithPath: "/Users/fukutomiteppei/Documents/GitHub/Transnote/DerivedData/SourcePackages/checkouts/argmax-oss-swift/Tests/WhisperKitTests/Resources/ja_test_clip.wav"),
@@ -28,14 +28,14 @@ final class PerformanceBaselineTests: XCTestCase {
         }
     }
 
-    /// 既存コード（WhisperKitTranscriber + 現在の逐次処理）での速度計測。
-    /// 長い音声ほど VAD 並列化が効かないことによる影響が出る。
+    /// Speed measurement with the existing code (WhisperKitTranscriber + current sequential processing).
+    /// The longer the audio, the more visible the impact of VAD parallelization not taking effect.
     func testBaselineTranscriptionSpeed() async throws {
         guard let whisperWAV = fixtureWAVURL else {
             throw XCTSkip("no whisper test wav")
         }
 
-        // 約3分の音声に加工（発話+無音でリアルな会議を模す）
+        // Extend to about 3 minutes of audio (speech + silence to mimic a realistic meeting)
         longAudioURL = try Self.makeLongAudio(from: whisperWAV, targetSeconds: 180)
 
         let transcriber = WhisperKitTranscriber()

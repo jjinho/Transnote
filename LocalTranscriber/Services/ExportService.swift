@@ -26,10 +26,10 @@ struct ExportService {
         }
     }
 
-    /// 字幕 segment の開始・終了順、重なり、範囲を検証する。
-    /// - 負の値・NaN・start > end は不正
-    /// - 前の segment の end が次の start より大きい（重なり）は不正
-    /// 不正があった場合、エクスポートを中断してユーザーへ通知する。
+    /// Validates the order, overlap, and range of subtitle segment start/end times.
+    /// - Negative values, NaN, and start > end are invalid
+    /// - A previous segment's end greater than the next segment's start (overlap) is invalid
+    /// If anything is invalid, the export is aborted and the user is notified.
     private func validateSegments(_ segments: [TranscriptSegment]) throws {
         var previousEnd: TimeInterval?
         for segment in segments {
@@ -37,13 +37,19 @@ struct ExportService {
                   segment.endTime.isFinite,
                   segment.startTime >= 0,
                   segment.endTime >= 0 else {
-                throw AppError.exportFailed("字幕の時間情報が不正です（負の値または非数値）。")
+                throw AppError.exportFailed(
+                    NSLocalizedString("字幕の時間情報が不正です（負の値または非数値）。", comment: "Invalid subtitle timing")
+                )
             }
             guard segment.endTime > segment.startTime else {
-                throw AppError.exportFailed("字幕の開始時刻が終了時刻より後になっています。")
+                throw AppError.exportFailed(
+                    NSLocalizedString("字幕の開始時刻が終了時刻より後になっています。", comment: "Subtitle start after end")
+                )
             }
             if let previousEnd, segment.startTime < previousEnd {
-                throw AppError.exportFailed("字幕セグメントが重なっています。")
+                throw AppError.exportFailed(
+                    NSLocalizedString("字幕セグメントが重なっています。", comment: "Overlapping subtitle segments")
+                )
             }
             previousEnd = segment.endTime
         }
@@ -77,8 +83,8 @@ struct ExportService {
         return lines.joined(separator: "\n")
     }
 
-    /// Markdown の見出し・リスト・リンクを壊さないよう、
-    /// ファイル名・セグメントテキストに含まれる特殊文字をエスケープする。
+    /// Escapes special characters in file names and segment text
+    /// so they do not break Markdown headings, lists, or links.
     private func escapeMarkdown(_ text: String) -> String {
         text
             .replacingOccurrences(of: "\\", with: "\\\\")
@@ -134,9 +140,9 @@ struct ExportService {
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// segment が無い場合の字幕用フォールバック。
-    /// 00:00:00 -> 00:00:00 の無効な区間ではなく、テキスト全体を
-    /// 0 秒からざっくり 1 秒の区間として表示する（実時間が不明なため）。
+    /// Subtitle fallback for when there are no segments.
+    /// Instead of an invalid 00:00:00 -> 00:00:00 range, the entire text is
+    /// shown as a rough 1-second range starting at 0 seconds (since the real timing is unknown).
     private func fallbackSegment(for transcript: Transcript) -> TranscriptSegment {
         TranscriptSegment(startTime: 0, endTime: 1, text: transcript.fullText)
     }

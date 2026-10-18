@@ -26,7 +26,7 @@ enum AppDirectories {
         applicationSupport.appendingPathComponent("History", isDirectory: true)
     }
 
-    /// 指定ディレクトリ配下の合計サイズ（バイト）を計算する。
+    /// Computes the total size in bytes under the given directory.
     static func directorySize(of directory: URL) -> Int64 {
         let keys: Set<URLResourceKey> = [.fileSizeKey, .isRegularFileKey]
         guard let enumerator = FileManager.default.enumerator(
@@ -43,7 +43,7 @@ enum AppDirectories {
         return total
     }
 
-    /// 指定ディレクトリ配下のファイルを削除し、空のディレクトリを残す。
+    /// Deletes the files under the given directory, leaving the empty directory in place.
     static func clearDirectory(_ directory: URL) {
         guard let entries = try? FileManager.default.contentsOfDirectory(
             at: directory,

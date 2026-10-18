@@ -4,10 +4,10 @@ import SwiftUI
 struct LocalTranscriberApp: App {
     init() {
         AppDirectories.ensureDirectoriesExist()
-        // Imports/ に残った古い一時ファイルや完了済み音声を自動クリーンアップする。
+        // Automatically clean up old temporary files and completed audio left in Imports/.
         try? AudioImportService().cleanupExpiredImports()
 
-        // 設定不整合（defaultModelID 等が Models に無い等）を起動時に検出してログへ出力する。
+        // Detect configuration inconsistencies at launch (e.g., defaultModelID missing from Models) and log them.
         for error in AppConfig.shared.validationErrors {
             AppLogger.error("AppConfig validation: \(error)", logger: AppLogger.general)
         }

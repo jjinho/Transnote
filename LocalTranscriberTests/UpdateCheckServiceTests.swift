@@ -7,7 +7,7 @@ final class UpdateCheckServiceTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        // 確認間隔と ETag の状態がテスト間で残らないようクリアする
+        // Clear the check interval and ETag state so they do not carry over between tests
         UserDefaults.standard.removeObject(forKey: "lastUpdateCheckDate")
         UserDefaults.standard.removeObject(forKey: "updateETag")
         MockURLProtocol.reset()
@@ -40,9 +40,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         super.tearDown()
     }
 
-    // Given: 現在版より新しいリリースと DMG asset
-    // When: checkForUpdate を実行
-    // Then: UpdateOffer を返す
+    // Given: a release newer than the current version, with a DMG asset
+    // When: checkForUpdate is run
+    // Then: returns an UpdateOffer
     func testCheckForUpdateReturnsOfferWhenNewerVersionExists() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -87,9 +87,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertEqual(offer?.releaseNotes, "Bug fixes")
     }
 
-    // Given: 現在版と同じリリース
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: a release equal to the current version
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilWhenUpToDate() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -122,9 +122,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: asset が無いリリース
-    // When: checkForUpdate を実行
-    // Then: fallback URL を使う
+    // Given: a release without assets
+    // When: checkForUpdate is run
+    // Then: uses the fallback URL
     func testCheckForUpdateUsesFallbackWhenAssetMissing() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -157,9 +157,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertEqual(offer?.downloadURL, config.updateDownloadFallbackURL)
     }
 
-    // Given: 不正なダウンロード URL が返る
-    // When: checkForUpdate を実行
-    // Then: fallback URL を使う
+    // Given: an invalid download URL is returned
+    // When: checkForUpdate is run
+    // Then: uses the fallback URL
     func testCheckForUpdateUsesFallbackWhenAssetURLIsNotAllowed() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -197,9 +197,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertEqual(offer?.downloadURL, config.updateDownloadFallbackURL)
     }
 
-    // Given: 不正な asset URL と不正な fallback
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: an invalid asset URL and an invalid fallback
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilWhenNoAllowedDownloadURL() async {
         let unsafeConfig = AppConfig(
             supportedExtensions: ["wav"],
@@ -252,9 +252,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: 期待する DMG 以外の .dmg のみが添付されたリリース
-    // When: checkForUpdate を実行
-    // Then: fallback URL を使う
+    // Given: a release with only .dmg files other than the expected DMG attached
+    // When: checkForUpdate is run
+    // Then: uses the fallback URL
     func testCheckForUpdateUsesFallbackWhenOnlyUnexpectedDMGExists() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -292,9 +292,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertEqual(offer?.downloadURL, config.updateDownloadFallbackURL)
     }
 
-    // Given: 別リポジトリのリリースレスポンス
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: a release response from a different repository
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilWhenRepositoryDoesNotMatch() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -332,9 +332,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: html_url に期待リポジトリ文字列が埋め込まれた別リポジトリ
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: a different repository whose html_url embeds the expected repository string
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilWhenRepositoryHTMLURLContainsExpectedPath() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -372,9 +372,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: GitHub REST API 相当（repository フィールドなし）の新しいリリース
-    // When: checkForUpdate を実行
-    // Then: html_url からリポジトリを検証し UpdateOffer を返す
+    // Given: a new release shaped like the GitHub REST API response (no repository field)
+    // When: checkForUpdate is run
+    // Then: validates the repository from html_url and returns an UpdateOffer
     func testCheckForUpdateReturnsOfferWhenRepositoryFieldIsAbsent() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -415,9 +415,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         )
     }
 
-    // Given: repository フィールドなし、html_url に期待リポジトリ文字列のみ埋め込み
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: no repository field, with the expected repository string only embedded in html_url
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilWhenRepositoryFieldIsAbsentAndHTMLURLIsUnrelated() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -452,9 +452,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: repository.full_name が不一致、html_url は期待リポジトリ
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: repository.full_name does not match; html_url is the expected repository
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilWhenRepositoryFullNameConflictsWithHTMLURL() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -492,9 +492,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: repository.full_name は期待リポジトリ、html_url は別ホスト
-    // When: checkForUpdate を実行
-    // Then: html_url 検証で拒否し nil を返す
+    // Given: repository.full_name is the expected repository; html_url is a different host
+    // When: checkForUpdate is run
+    // Then: rejected by html_url validation; returns nil
     func testCheckForUpdateReturnsNilWhenRepositoryFullNameMatchesButHTMLURLDoesNot() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -532,9 +532,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: repository が JSON null、html_url は期待リポジトリ
-    // When: checkForUpdate を実行
-    // Then: UpdateOffer を返す
+    // Given: repository is JSON null; html_url is the expected repository
+    // When: checkForUpdate is run
+    // Then: returns an UpdateOffer
     func testCheckForUpdateReturnsOfferWhenRepositoryFieldIsNull() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -574,9 +574,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         )
     }
 
-    // Given: html_url がタグなしの /releases
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: html_url is /releases without a tag
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilWhenHTMLURLLacksReleaseTag() async {
         MockURLProtocol.requestHandler = { _ in
             let json = """
@@ -611,9 +611,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: API がエラーを返す
-    // When: checkForUpdate を実行
-    // Then: nil を返す
+    // Given: the API returns an error
+    // When: checkForUpdate is run
+    // Then: returns nil
     func testCheckForUpdateReturnsNilOnHTTPError() async {
         MockURLProtocol.requestHandler = { _ in
             let response = HTTPURLResponse(
@@ -635,9 +635,9 @@ final class UpdateCheckServiceTests: XCTestCase {
         XCTAssertNil(offer)
     }
 
-    // Given: 更新チェックが無効
-    // When: checkForUpdate を実行
-    // Then: ネットワークに触れず nil を返す
+    // Given: update checks are disabled
+    // When: checkForUpdate is run
+    // Then: returns nil without touching the network
     func testCheckForUpdateSkipsWhenDisabled() async {
         let disabledConfig = AppConfig(
             supportedExtensions: ["wav"],

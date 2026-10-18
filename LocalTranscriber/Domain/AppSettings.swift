@@ -5,7 +5,7 @@ struct ModelOption: Identifiable, Sendable, Equatable {
     let displayName: String
     let whisperKitModelName: String
 
-    /// ダウンロードサイズ（バイト）。未設定の場合は nil。
+    /// Download size in bytes. nil if not set.
     let downloadSizeBytes: Int64?
     let license: String?
     let distributionSource: String?
@@ -29,7 +29,7 @@ struct ModelOption: Identifiable, Sendable, Equatable {
         self.modelVersion = modelVersion
     }
 
-    /// Localizable.xcstrings から取得するローカライズ済み表示名。
+    /// Localized display name from Localizable.xcstrings.
     var localizedDisplayName: String {
         NSLocalizedString("model.\(id)", comment: "Model display name")
     }
@@ -39,13 +39,13 @@ struct LanguageOption: Identifiable, Sendable, Equatable {
     let id: String
     let displayName: String
 
-    /// Localizable.xcstrings から取得するローカライズ済み表示名。
+    /// Localized display name from Localizable.xcstrings.
     var localizedDisplayName: String {
         NSLocalizedString("language.\(id)", comment: "Language display name")
     }
 }
 
-/// ViewModel などから参照する AppSettings の抽象。テスト・DI のために Protocol 化する。
+/// Abstraction of AppSettings referenced by ViewModels and others. Made a protocol for testing and DI.
 @MainActor
 protocol AppSettingsProviding: AnyObject, ObservableObject {
     var selectedModelID: String { get set }
@@ -112,10 +112,10 @@ final class AppSettings: ObservableObject, AppSettingsProviding {
         models.first { $0.id == selectedModelID }
     }
 
-    /// RAM・CPUコア数に基づく推奨モデル ID。
-    /// - 16GB 以上: small
-    /// - 8GB 以上: base
-    /// - それ以外: tiny
+    /// Recommended model ID based on RAM and CPU core count.
+    /// - 16 GB or more: small
+    /// - 8 GB or more: base
+    /// - Otherwise: tiny
     var recommendedModelID: String {
         let memoryGB = Double(ProcessInfo.processInfo.physicalMemory) / (1024 * 1024 * 1024)
         let cores = ProcessInfo.processInfo.processorCount
@@ -162,8 +162,8 @@ struct AppConfig {
     let allowedUpdateDownloadHosts: [String]
     let maxImportFileSizeBytes: Int64
 
-    /// 設定不整合を起動時に明示的に検出するための検証結果。
-    /// 空でない場合は LocalTranscriberApp の起動時にログへ出力する。
+    /// Validation result for explicitly detecting configuration inconsistencies at launch.
+    /// If non-empty, it is logged when LocalTranscriberApp launches.
     var validationErrors: [String] {
         var errors: [String] = []
         if defaultModelID.isEmpty {

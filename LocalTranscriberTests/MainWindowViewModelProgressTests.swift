@@ -17,7 +17,7 @@ final class MainWindowViewModelProgressTests: XCTestCase {
     }
 
     func testPartialTextUpdatesDuringTranscription() async throws {
-        // Given: partialText を2回 emit する Mock Transcriber
+        // Given: a mock Transcriber that emits partialText twice
         let mock = MockProgressTranscriber(
             partialTexts: ["Hello", "Hello world"],
             finalText: "Hello world final",
@@ -29,17 +29,17 @@ final class MainWindowViewModelProgressTests: XCTestCase {
         // When
         viewModel.startTranscription()
 
-        // Then: 1回目の partialText が反映される
+        // Then: the first partialText is reflected
         try await waitUntil { self.viewModel.transcriptText == "Hello" }
         XCTAssertEqual(viewModel.uiState, .transcribing)
         XCTAssertNil(viewModel.currentTranscript)
         XCTAssertFalse(viewModel.canExport)
 
-        // Then: 2回目の partialText が反映される
+        // Then: the second partialText is reflected
         try await waitUntil { self.viewModel.transcriptText == "Hello world" }
         XCTAssertFalse(viewModel.canExport)
 
-        // Then: 完了後は最終 Transcript で上書きされる
+        // Then: after completion, it is overwritten by the final Transcript
         try await waitUntil { self.viewModel.uiState == .done }
         XCTAssertEqual(viewModel.transcriptText, "Hello world final")
         XCTAssertEqual(viewModel.currentTranscript?.fullText, "Hello world final")
@@ -66,7 +66,7 @@ final class MainWindowViewModelProgressTests: XCTestCase {
     }
 
     func testStartTranscriptionClearsPreviousResult() async throws {
-        // Given: 前回の文字起こし結果が残っている
+        // Given: a previous transcription result remains
         let mock = MockProgressTranscriber(
             partialTexts: [],
             finalText: "new result",
@@ -83,7 +83,7 @@ final class MainWindowViewModelProgressTests: XCTestCase {
         // When
         viewModel.startTranscription()
 
-        // Then: 開始直後に前回結果がクリアされる
+        // Then: the previous result is cleared immediately after starting
         XCTAssertEqual(viewModel.transcriptText, "")
         XCTAssertNil(viewModel.currentTranscript)
         XCTAssertFalse(viewModel.canExport)
@@ -125,8 +125,13 @@ final class MainWindowViewModelProgressTests: XCTestCase {
         viewModel = MainWindowViewModel()
         viewModel.downloadedModelIDs = []
 
-        XCTAssertNotNil(viewModel.modelDownloadGuidance)
-        XCTAssertTrue(viewModel.modelDownloadGuidance?.contains("ダウンロード") == true)
+        XCTAssertEqual(
+            viewModel.modelDownloadGuidance,
+            L(
+                "初回はモデルのダウンロードが必要です（音声は端末内で処理し、通信はダウンロード時のみ）",
+                comment: "Model download onboarding guidance"
+            )
+        )
     }
 
     func testModelDownloadGuidanceIsHiddenForDownloadedModel() {
@@ -236,14 +241,26 @@ final class MainWindowViewModelProgressTests: XCTestCase {
             formattedFileSize: "64 bytes"
         )
 
-        XCTAssertTrue(viewModel.modelDownloadSuccessToastMessage().contains("文字起こしを開始"))
+        XCTAssertEqual(
+            viewModel.modelDownloadSuccessToastMessage(),
+            L(
+                "モデルのダウンロードが完了しました。文字起こしを開始できます。",
+                comment: "Model download success toast when file is selected"
+            )
+        )
     }
 
     func testModelDownloadSuccessToastMessageWhenNoFileIsSelected() {
         AppSettings.shared.selectedModelID = "base"
         viewModel = MainWindowViewModel()
 
-        XCTAssertTrue(viewModel.modelDownloadSuccessToastMessage().contains("音声ファイルを選択"))
+        XCTAssertEqual(
+            viewModel.modelDownloadSuccessToastMessage(),
+            L(
+                "モデルのダウンロードが完了しました。音声ファイルを選択してください。",
+                comment: "Model download success toast when no file is selected"
+            )
+        )
     }
 
     func testHasPlayableSegmentsReturnsFalseForEmptySegments() {

@@ -3,7 +3,7 @@ import XCTest
 
 final class TranscriptionProgressDisplayTests: XCTestCase {
     func testDownloadingModelShowsPercentDetail() {
-        // Given: ダウンロード中 45%
+        // Given: downloading at 45%
         let update = TranscriptionProgressUpdate.make(
             phase: .downloadingModel,
             fraction: 0.45,
@@ -21,7 +21,7 @@ final class TranscriptionProgressDisplayTests: XCTestCase {
     }
 
     func testDownloadingModelShowsByteDetailWhenAvailable() {
-        // Given: バイト進捗付き Progress
+        // Given: Progress with byte progress
         let progress = Progress(totalUnitCount: 100)
         progress.completedUnitCount = 64
 
@@ -41,7 +41,7 @@ final class TranscriptionProgressDisplayTests: XCTestCase {
     }
 
     func testLoadingModelUsesIndeterminateStyle() {
-        // Given: モデル読み込み中
+        // Given: loading the model
         let update = TranscriptionProgressUpdate.make(
             phase: .loadingModel,
             fraction: 0,
@@ -55,11 +55,15 @@ final class TranscriptionProgressDisplayTests: XCTestCase {
         XCTAssertEqual(display.style, .indeterminate)
         XCTAssertNil(display.fraction)
         XCTAssertTrue(display.detailLabel?.contains("Small") == true)
-        XCTAssertTrue(display.detailLabel?.contains("時間がかかる") == true)
+        XCTAssertTrue(
+            display.detailLabel?.contains(
+                L("初回のモデル読み込みは時間がかかることがあります", comment: "Loading model indeterminate progress guidance")
+            ) == true
+        )
     }
 
     func testTranscribingUsesDeterminateStyle() {
-        // Given: 文字起こし 32%
+        // Given: transcribing at 32%
         let update = TranscriptionProgressUpdate.make(
             phase: .transcribing,
             fraction: 0.32,
@@ -85,7 +89,11 @@ final class TranscriptionProgressDisplayTests: XCTestCase {
 
         XCTAssertEqual(display.style, .indeterminate)
         XCTAssertTrue(display.detailLabel?.contains("Base") == true)
-        XCTAssertTrue(display.detailLabel?.contains("時間がかかる") == true)
+        XCTAssertTrue(
+            display.detailLabel?.contains(
+                L("初回のモデル読み込みは時間がかかることがあります", comment: "Loading model indeterminate progress guidance")
+            ) == true
+        )
     }
 
     func testTranscribingWithPartialTextIncludesPartialGuidance() {
@@ -97,7 +105,9 @@ final class TranscriptionProgressDisplayTests: XCTestCase {
 
         let display = TranscriptionProgressDisplay.from(update: update)
 
-        XCTAssertTrue(display.detailLabel?.contains("途中結果") == true)
+        XCTAssertTrue(
+            display.detailLabel?.contains(L("途中結果を表示中", comment: "Partial transcription guidance")) == true
+        )
         XCTAssertTrue(display.detailLabel?.contains("50%") == true)
     }
 

@@ -58,7 +58,7 @@
     if (!releaseList) {
       return;
     }
-    // 再描画時は既存の項目をクリア（latest 解決後に呼び直すため）
+    // Clear existing items when re-rendering (since this is called again after latest resolves)
     while (releaseList.firstChild) {
       releaseList.removeChild(releaseList.firstChild);
     }
@@ -84,7 +84,7 @@
       version.textContent = release.tag_name;
       versionRow.appendChild(version);
 
-      // releases/latest と一致する場合のみ「最新」を表示
+      // Show the "latest" badge only when it matches releases/latest
       if (release.tag_name === latestTagName) {
         var latestBadge = document.createElement('span');
         latestBadge.className = 'badge';
@@ -163,8 +163,8 @@
     releaseListNote.appendChild(document.createTextNode(' をご覧ください。'));
   }
 
-  // 一覧 fetch は latest よりも先に完了し得るため、後から latest が
-  // 解決したら再描画して「最新」バッジを追記する。
+  // The list fetch may complete before latest, so once latest
+  // resolves later, re-render to add the "latest" badge.
   var fetchedReleases = null;
   function rerenderIfNeeded() {
     if (fetchedReleases) {
@@ -228,7 +228,7 @@
       showReleaseListError();
     });
 
-  // Node.js からの自動テスト用（ブラウザ実行では module が無いため無視される）
+  // For automated tests from Node.js (ignored in the browser, where module does not exist)
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
       isAllowedDownloadURL: isAllowedDownloadURL,

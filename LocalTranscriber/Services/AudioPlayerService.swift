@@ -11,18 +11,18 @@ final class AudioPlayerService {
     private var segmentEndTime: TimeInterval = 0
     private var onFinished: (() -> Void)?
     private var pendingStartTime: TimeInterval?
-    /// 再生の世代番号。playSegment を呼ぶたびに加算し、古い seek 完了コールバックを無視するために使う。
+    /// Playback generation number. Incremented on every playSegment call and used to ignore stale seek completion callbacks.
     private var playbackGeneration = 0
-    /// pendingStartTime に対応する世代番号。ステータス監視経由で開始する際に使用する。
+    /// Generation number corresponding to pendingStartTime. Used when starting via status observation.
     private var pendingPlaybackGeneration = 0
 
     private(set) var isPlaying = false
     private(set) var loadedURL: URL?
-    /// 現在の再生位置（秒）。再生していない場合は最後の値を保持する。
+    /// Current playback position in seconds. Retains the last value when not playing.
     private(set) var currentPlaybackTime: TimeInterval = 0
-    /// 現在読み込み中の音声の長さ（秒）。
+    /// Duration in seconds of the currently loaded audio.
     private(set) var duration: TimeInterval = 0
-    /// 再生位置更新時のコールバック（現在秒, セグメント長秒）。
+    /// Callback on playback position updates (current seconds, segment length in seconds).
     var onPlaybackTimeUpdate: ((TimeInterval, TimeInterval) -> Void)?
 
     var hasActiveTimeObserver: Bool {
@@ -60,7 +60,7 @@ final class AudioPlayerService {
         segmentEndTime = end
         self.onFinished = onFinished
         pendingStartTime = start
-        // 新しい再生リクエストごとに世代を進める（古い seek コールバックを無効化するため）
+        // Advance the generation for each new playback request (to invalidate stale seek callbacks)
         playbackGeneration += 1
         let generation = playbackGeneration
 
@@ -79,14 +79,14 @@ final class AudioPlayerService {
         }
     }
 
-    /// 一時停止する（現在位置を保持）。
+    /// Pauses playback (keeping the current position).
     func pause() {
         guard isPlaying else { return }
         player?.pause()
         isPlaying = false
     }
 
-    /// 一時停止から再開する。
+    /// Resumes from pause.
     func resume() {
         guard !isPlaying, let player else { return }
         player.play()
@@ -137,12 +137,12 @@ final class AudioPlayerService {
         let startTime = CMTime(seconds: start, preferredTimescale: 600)
         player.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
             Task { @MainActor in
-                // 古い seek の完了コールバックは無視する（世代が異なる場合）
+                // Ignore completion callbacks from stale seeks (when the generation differs)
                 guard let self else { return }
                 guard self.playbackGeneration == generation else { return }
 
                 guard finished else {
-                    // seek が別の seek に割り込まれた場合。ここでは完了扱いにせず何もしない
+                    // The seek was interrupted by another seek. Do nothing here rather than treating it as complete
                     return
                 }
                 self.player?.play()

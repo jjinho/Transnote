@@ -49,13 +49,13 @@ struct AudioFileService {
         )
     }
 
-    /// AVFoundation で実際にデコード可能かを軽くプローブする。
-    /// 拡張子チェックだけでは見逃す破損ファイルを検出するための補助。
-    /// - Parameter url: プローブ対象のファイル URL
-    /// - Returns: デコード可能なら true
+    /// Lightly probes whether AVFoundation can actually decode the file.
+    /// Helps detect corrupted files that an extension check alone would miss.
+    /// - Parameter url: URL of the file to probe
+    /// - Returns: true if decodable
     func probeDecodability(url: URL) -> Bool {
         let asset = AVURLAsset(url: url)
-        // 同期的にトラック情報へアクセスして再生可能性を確認する（軽量プローブ）
+        // Synchronously access track information to check playability (lightweight probe)
         guard asset.tracks(withMediaType: .audio).first != nil || asset.isPlayable else {
             return false
         }
@@ -66,7 +66,7 @@ struct AudioFileService {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
-    /// ファイルの SHA256 フィンガープリントを計算する。
+    /// Computes the file's SHA256 fingerprint.
     static func sha256(of url: URL) -> String? {
         guard let handle = try? FileHandle(forReadingFrom: url) else {
             return nil

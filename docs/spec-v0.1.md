@@ -1,46 +1,46 @@
-# v0.1 仕様
+# v0.1 Specification
 
-最初のリリースはこの範囲に切る。
+The first release is scoped as follows.
 
 ```text
-対象OS: macOS 14+
-開発環境: Xcode 16+
+Target OS: macOS 14+
+Development environment: Xcode 16+
 UI: SwiftUI
-文字起こし: WhisperKit
-入力: wav, mp3, m4a, flac
-出力: txt, md, json, srt, vtt
-言語: auto, ja, en
-モデル: tiny, base, small, large-v3系
-保存: ローカルのみ
-通信: モデルDL時のみ
+Transcription: WhisperKit
+Input: wav, mp3, m4a, flac
+Output: txt, md, json, srt, vtt
+Languages: auto, ja, en
+Models: tiny, base, small, large-v3 variants
+Storage: local only
+Network: only for model downloads
 ```
 
-## スコープ外
+## Out of scope
 
-以下は v0.1 には含めない。
+The following are not included in v0.1.
 
-- 動画ファイル
-- 話者分離
-- リアルタイム録音
-- 要約
-- 用語辞書
+- Video files
+- Speaker diarization
+- Real-time recording
+- Summarization
+- Custom vocabulary
 
-## 前提技術
+## Underlying technology
 
-WhisperKit は `argmaxinc/argmax-oss-swift` の Swift Package として提供され、`WhisperKit` / `TTSKit` / `SpeakerKit` を個別プロダクトとして追加できる。公式 README では前提環境が **macOS 14.0 以降、Xcode 16.0 以降** とされている。([GitHub][1])
+WhisperKit is provided as a Swift Package from `argmaxinc/argmax-oss-swift`, and `WhisperKit` / `TTSKit` / `SpeakerKit` can be added as separate products. The official README lists the prerequisites as **macOS 14.0 or later and Xcode 16.0 or later**. ([GitHub][1])
 
-ローカル音声ファイルの文字起こしは `WhisperKit().transcribe(audioPath:)` のように呼び出せる構成で、WAV / MP3 / M4A / FLAC などの形式が案内されている。([GitHub][1]) WhisperKit のドキュメントではリアルタイムストリーミング、ワードレベルタイムスタンプ、VAD、モデル管理も主要機能として説明されている。([Mintlify][2])
+Local audio files can be transcribed with a call such as `WhisperKit().transcribe(audioPath:)`, and formats such as WAV / MP3 / M4A / FLAC are documented. ([GitHub][1]) The WhisperKit documentation also describes real-time streaming, word-level timestamps, VAD, and model management as key features. ([Mintlify][2])
 
-## MVP フロー
+## MVP flow
 
 ```text
-ローカル音声・動画ファイルを選択
+Select a local audio or video file
 ↓
-WhisperKitでオンデバイス文字起こし
+Transcribe on-device with WhisperKit
 ↓
-結果を画面表示
+Display the result on screen
 ↓
-TXT / SRT / VTT / JSONで保存
+Save as TXT / SRT / VTT / JSON
 ```
 
 [1]: https://github.com/argmaxinc/argmax-oss-swift "GitHub - argmaxinc/argmax-oss-swift: On-device Speech AI for Apple Silicon · GitHub"

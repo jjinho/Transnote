@@ -55,7 +55,7 @@ struct TranscriptionProgressDisplay: Equatable {
                 style = .determinate
                 fraction = min(1.0, max(0.0, update.fraction))
             } else {
-                // 実進捗が不明な場合は indeterminate 表示
+                // Show indeterminate progress when actual progress is unknown
                 style = .indeterminate
                 fraction = nil
             }
@@ -140,8 +140,8 @@ struct TranscriptionProgressDisplay: Equatable {
             return percent > 0 ? "\(percent)%" : nil
 
         case .convertingAudio:
-            // 実際の処理は WhisperKit が音声ファイルを読み込み、モデルの前処理（MelSpectrogram 等）を
-            // 行う段階。画面上ではその内容が分かる文言にする。
+            // At this stage WhisperKit is actually loading the audio file and running model preprocessing (MelSpectrogram, etc.).
+            // The on-screen wording should make that clear.
             if let modelName = update.modelDisplayName {
                 return "\(modelName) · " + NSLocalizedString(
                     "音声を読み込んでいます（モデルの前処理）",

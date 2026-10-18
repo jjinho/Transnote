@@ -195,7 +195,7 @@ final class MainWindowViewModelImportTests: XCTestCase {
     }
 }
 
-// 完了を待機できる非同期ゲート
+// Async gate that can wait for completion
 final class AsyncGate: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<Void, Never>?
@@ -218,7 +218,7 @@ final class AsyncGate: @unchecked Sendable {
     }
 }
 
-// テスト用の Transcriber モック
+// Mock Transcriber for tests
 final class MockTranscriber: Transcriber, @unchecked Sendable {
     private let gate: AsyncGate
     init(gate: AsyncGate) { self.gate = gate }

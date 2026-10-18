@@ -1,4 +1,4 @@
-// Node テスト用に最小限の DOM / fetch スタブを用意する。
+// Set up minimal DOM / fetch stubs for Node tests.
 function noopElement() {
   return {
     className: '',

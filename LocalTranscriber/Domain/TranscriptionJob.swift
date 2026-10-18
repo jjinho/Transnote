@@ -9,7 +9,7 @@ struct TranscriptionJob: Identifiable, Sendable {
     let modelDisplayName: String
     let languageID: String
     let vadEnabled: Bool
-    /// 長時間音声を分割するチャンク長（秒）。デフォルト 600 秒（10分）。
+    /// Chunk length in seconds for splitting long audio. Defaults to 600 seconds (10 minutes).
     let chunkDuration: TimeInterval
 
     init(

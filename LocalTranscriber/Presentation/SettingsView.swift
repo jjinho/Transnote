@@ -12,7 +12,10 @@ struct SettingsView: View {
 
     private func modelSizeSuffix(_ model: ModelOption) -> String {
         guard let bytes = model.downloadSizeBytes else { return "" }
-        return "（" + ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) + "）"
+        return String(
+            format: NSLocalizedString("（%@）", comment: "Model download size suffix"),
+            ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+        )
     }
 
     var body: some View {
@@ -254,7 +257,7 @@ private struct StorageRow: View {
     let directory: URL
     let icon: String
 
-    @State private var sizeText: String = "計算中…"
+    @State private var sizeText: String?
 
     var body: some View {
         HStack {
@@ -262,7 +265,7 @@ private struct StorageRow: View {
                 .foregroundStyle(.secondary)
             Text(title)
             Spacer()
-            Text(sizeText)
+            Text(sizeText ?? NSLocalizedString("計算中…", comment: "Storage size is being calculated"))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
             Button("クリア") {
@@ -271,7 +274,7 @@ private struct StorageRow: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .disabled(sizeText == "計算中…")
+            .disabled(sizeText == nil)
         }
         .onAppear {
             let bytes = AppDirectories.directorySize(of: directory)

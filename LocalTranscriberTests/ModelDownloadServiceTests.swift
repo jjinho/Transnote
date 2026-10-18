@@ -43,7 +43,7 @@ final class ModelDownloadServiceTests: XCTestCase {
     }
 
     func testCleanUpFailedDownloadRemovesNewlyCreatedVariantFolderOnly() throws {
-        // Given: ダウンロード開始前に存在していた既存の完全なモデルフォルダ（削除してはならない）
+        // Given: an existing complete model folder present before the download started (must not be deleted)
         let existingFolder = temporaryRoot
             .appendingPathComponent("models/openai_whisper-base", isDirectory: true)
         try FileManager.default.createDirectory(at: existingFolder, withIntermediateDirectories: true)
@@ -52,7 +52,7 @@ final class ModelDownloadServiceTests: XCTestCase {
             FileManager.default.createFile(atPath: fileURL.path, contents: Data("model".utf8))
         }
 
-        // Given: ダウンロード開始時点のスナップショット（既存モデルフォルダのみ）
+        // Given: a snapshot at download start (only the existing model folder)
         let directoriesBeforeDownload = Set(
             availability.variantDirectories(named: "base").map { $0.path }
         )
@@ -61,7 +61,7 @@ final class ModelDownloadServiceTests: XCTestCase {
             directoriesBeforeDownload.contains { $0.hasSuffix("models/openai_whisper-base") }
         )
 
-        // Given: ダウンロード失敗で新規生成された部分フォルダ（削除対象）
+        // Given: a partial folder newly created by a failed download (to be deleted)
         let partialFolder = temporaryRoot
             .appendingPathComponent("models/argmaxinc/whisperkit-coreml/openai_whisper-base", isDirectory: true)
         try FileManager.default.createDirectory(at: partialFolder, withIntermediateDirectories: true)
@@ -70,28 +70,28 @@ final class ModelDownloadServiceTests: XCTestCase {
             FileManager.default.createFile(atPath: fileURL.path, contents: Data())
         }
 
-        // When: ダウンロード失敗時のクリーンアップを実行
+        // When: cleanup after download failure runs
         service.cleanUpFailedDownload(
             whisperKitModelName: "base",
             directoriesBeforeDownload: directoriesBeforeDownload
         )
 
-        // Then: 新規生成された部分フォルダだけが削除される
+        // Then: only the newly created partial folder is deleted
         XCTAssertFalse(FileManager.default.fileExists(atPath: partialFolder.path))
 
-        // Then: 既存の完全なモデルフォルダは保持される
+        // Then: the existing complete model folder is kept
         XCTAssertTrue(FileManager.default.fileExists(atPath: existingFolder.path))
         XCTAssertTrue(availability.isDownloaded(whisperKitModelName: "base"))
     }
 
     func testCleanUpFailedDownloadRemovesNewlyCreatedHiddenStagingFolder() throws {
-        // Given: ダウンロード開始前に隠しステージングは存在しない
+        // Given: no hidden staging folder exists before the download starts
         let directoriesBeforeDownload = Set(
             availability.variantDirectories(named: "base", includingHidden: true).map { $0.path }
         )
         XCTAssertTrue(directoriesBeforeDownload.isEmpty)
 
-        // Given: 失敗した WhisperKit ダウンロードが .cache 配下に残した部分フォルダ
+        // Given: a partial folder left under .cache by a failed WhisperKit download
         let stagingFolder = temporaryRoot.appendingPathComponent(
             ".cache/huggingface/download/openai_whisper-base",
             isDirectory: true
@@ -108,12 +108,12 @@ final class ModelDownloadServiceTests: XCTestCase {
             directoriesBeforeDownload: directoriesBeforeDownload
         )
 
-        // Then: 選択候補からは除外しつつ、クリーンアップでは削除できる
+        // Then: excluded from selection candidates, but removable during cleanup
         XCTAssertFalse(FileManager.default.fileExists(atPath: stagingFolder.path))
     }
 
     func testCleanUpFailedDownloadPreservesHiddenStagingFolderThatExistedBeforeDownload() throws {
-        // Given: ダウンロード開始前から存在する隠しステージングフォルダ（削除してはならない）
+        // Given: a hidden staging folder that existed before the download started (must not be deleted)
         let existingStaging = temporaryRoot.appendingPathComponent(
             ".cache/huggingface/download/openai_whisper-base",
             isDirectory: true
@@ -125,13 +125,13 @@ final class ModelDownloadServiceTests: XCTestCase {
         )
         XCTAssertTrue(directoriesBeforeDownload.contains { $0.hasSuffix("openai_whisper-base") })
 
-        // When: 失敗クリーンアップ
+        // When: failure cleanup runs
         service.cleanUpFailedDownload(
             whisperKitModelName: "base",
             directoriesBeforeDownload: directoriesBeforeDownload
         )
 
-        // Then: 事前存在していた隠しフォルダは残る
+        // Then: the pre-existing hidden folder remains
         XCTAssertTrue(FileManager.default.fileExists(atPath: existingStaging.path))
     }
 }

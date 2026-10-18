@@ -4,9 +4,9 @@ import XCTest
 final class UpdateURLValidatorTests: XCTestCase {
     private let allowedHosts = ["github.com", "objects.githubusercontent.com"]
 
-    // Given: 許可ホストと完全一致する HTTPS URL
-    // When: isAllowedDownloadURL を実行
-    // Then: true を返す
+    // Given: an HTTPS URL that exactly matches an allowed host
+    // When: isAllowedDownloadURL is run
+    // Then: returns true
     func testIsAllowedDownloadURLAcceptsExactHostMatch() {
         XCTAssertTrue(
             UpdateURLValidator.isAllowedDownloadURL(
@@ -22,9 +22,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: 許可ホストのサブドメイン URL
-    // When: isAllowedDownloadURL を実行
-    // Then: false を返す
+    // Given: a URL on a subdomain of an allowed host
+    // When: isAllowedDownloadURL is run
+    // Then: returns false
     func testIsAllowedDownloadURLRejectsSubdomainWildcard() {
         XCTAssertFalse(
             UpdateURLValidator.isAllowedDownloadURL(
@@ -40,9 +40,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: 非 HTTPS または許可外ホスト
-    // When: isAllowedDownloadURL を実行
-    // Then: false を返す
+    // Given: a non-HTTPS URL or a disallowed host
+    // When: isAllowedDownloadURL is run
+    // Then: returns false
     func testIsAllowedDownloadURLRejectsNonHTTPSAndUnknownHosts() {
         XCTAssertFalse(
             UpdateURLValidator.isAllowedDownloadURL(
@@ -58,9 +58,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: GitHub Releases API が返す html_url
-    // When: matchesReleaseHTMLURL を実行
-    // Then: 期待リポジトリなら true
+    // Given: an html_url returned by the GitHub Releases API
+    // When: matchesReleaseHTMLURL is run
+    // Then: true for the expected repository
     func testMatchesReleaseHTMLURLAcceptsGitHubReleasePage() {
         XCTAssertTrue(
             UpdateRepositoryValidator.matchesReleaseHTMLURL(
@@ -70,9 +70,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: クエリに期待リポジトリ文字列を埋め込んだ別ホスト URL
-    // When: matchesReleaseHTMLURL を実行
-    // Then: false を返す
+    // Given: a URL on a different host with the expected repository string embedded in the query
+    // When: matchesReleaseHTMLURL is run
+    // Then: returns false
     func testMatchesReleaseHTMLURLRejectsEmbeddedRepositorySubstring() {
         XCTAssertFalse(
             UpdateRepositoryValidator.matchesReleaseHTMLURL(
@@ -82,9 +82,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: 別リポジトリのリリースページ
-    // When: matchesReleaseHTMLURL を実行
-    // Then: false を返す
+    // Given: a release page of a different repository
+    // When: matchesReleaseHTMLURL is run
+    // Then: returns false
     func testMatchesReleaseHTMLURLRejectsOtherRepository() {
         XCTAssertFalse(
             UpdateRepositoryValidator.matchesReleaseHTMLURL(
@@ -94,9 +94,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: リポジトリ名が前方一致する別リポジトリ
-    // When: matchesReleaseHTMLURL を実行
-    // Then: false を返す
+    // Given: a different repository whose name shares a prefix with the expected one
+    // When: matchesReleaseHTMLURL is run
+    // Then: returns false
     func testMatchesReleaseHTMLURLRejectsRepositoryNamePrefix() {
         XCTAssertFalse(
             UpdateRepositoryValidator.matchesReleaseHTMLURL(
@@ -106,9 +106,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: github.com 以外、または HTTPS 以外
-    // When: matchesReleaseHTMLURL を実行
-    // Then: false を返す
+    // Given: a host other than github.com, or a non-HTTPS URL
+    // When: matchesReleaseHTMLURL is run
+    // Then: returns false
     func testMatchesReleaseHTMLURLRejectsNonGitHubHostsAndHTTP() {
         XCTAssertFalse(
             UpdateRepositoryValidator.matchesReleaseHTMLURL(
@@ -124,9 +124,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: タグを含まない /releases または /releases/latest
-    // When: matchesReleaseHTMLURL を実行
-    // Then: false を返す
+    // Given: /releases or /releases/latest without a tag
+    // When: matchesReleaseHTMLURL is run
+    // Then: returns false
     func testMatchesReleaseHTMLURLRejectsReleasesPathWithoutTag() {
         XCTAssertFalse(
             UpdateRepositoryValidator.matchesReleaseHTMLURL(
@@ -148,9 +148,9 @@ final class UpdateURLValidatorTests: XCTestCase {
         )
     }
 
-    // Given: タグ名に `/` を含むリリースページ URL
-    // When: matchesReleaseHTMLURL を実行
-    // Then: owner/repo が一致すれば true
+    // Given: a release page URL whose tag name contains `/`
+    // When: matchesReleaseHTMLURL is run
+    // Then: true if owner/repo match
     func testMatchesReleaseHTMLURLAcceptsTagContainingSlash() {
         XCTAssertTrue(
             UpdateRepositoryValidator.matchesReleaseHTMLURL(

@@ -1,55 +1,60 @@
 import XCTest
 
 final class LocalTranscriberUITests: XCTestCase {
-    func testMainWindowLaunchesAndShowsEmptyState() {
+    /// Launches the app in US English so element lookups by label do not depend on the Mac's language.
+    private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(en-US)", "-AppleLocale", "en_US"]
         app.launch()
+        return app
+    }
 
-        // メインウィンドウが起動し、空状態メッセージが表示される
-        XCTAssertTrue(app.staticTexts["音声ファイルをドロップまたは選択して、文字起こしを開始してください"].waitForExistence(timeout: 10))
+    func testMainWindowLaunchesAndShowsEmptyState() {
+        let app = launchApp()
+
+        // The main window launches and shows the empty-state message
+        XCTAssertTrue(app.staticTexts["Drop or select an audio file to start transcribing"].waitForExistence(timeout: 10))
     }
 
     func testExportMenuAvailableAfterEmptyState() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
 
-        // エクスポートメニューが存在する（テキスト無しのため無効状態でも存在はする）
-        XCTAssertTrue(app.menuButtons["文字起こし結果をエクスポート"].waitForExistence(timeout: 10))
+        // The export menu exists (it exists even while disabled, since there is no text)
+        XCTAssertTrue(app.menuButtons["Export transcription result"].waitForExistence(timeout: 10))
     }
 
     func testSettingsSheetOpensAndCloses() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
 
-        // Given: メイン画面が起動している（設定ボタンは常に表示される）
-        XCTAssertTrue(app.buttons["設定"].firstMatch.waitForExistence(timeout: 30))
+        // Given: the main screen is running (the settings button is always shown)
+        XCTAssertTrue(app.buttons["Settings"].firstMatch.waitForExistence(timeout: 30))
 
-        // クラッシュ復旧アラートが出ていれば破棄して閉じる（環境の残データによる）
+        // If a crash-recovery alert is shown, discard and close it (caused by leftover data in the environment)
         let discardButton = app.sheets.buttons["action-button-2"]
         if discardButton.waitForExistence(timeout: 2) {
             discardButton.tap()
         }
 
-        // When: 設定シートを開く
-        app.buttons["設定"].firstMatch.tap()
-        let closeButton = app.buttons["設定を閉じる"]
+        // When: the settings sheet is opened
+        app.buttons["Settings"].firstMatch.tap()
+        let closeButton = app.buttons["Close Settings"]
         XCTAssertTrue(closeButton.waitForExistence(timeout: 10))
         XCTAssertTrue(closeButton.isHittable)
 
-        // Then: 閉じるボタンで設定シートが閉じる
-        app.buttons["設定を閉じる"].tap()
+        // Then: the close button closes the settings sheet
+        app.buttons["Close Settings"].tap()
         XCTAssertTrue(closeButton.waitForNonExistence(timeout: 3))
 
-        // 下部の閉じるボタンもスクロールせずに操作できる
-        app.buttons["設定"].firstMatch.tap()
-        let footerCloseButton = app.sheets.buttons["閉じる"]
+        // The bottom close button is also operable without scrolling
+        app.buttons["Settings"].firstMatch.tap()
+        let footerCloseButton = app.sheets.buttons["Close"]
         XCTAssertTrue(footerCloseButton.waitForExistence(timeout: 10))
         XCTAssertTrue(footerCloseButton.isHittable)
         footerCloseButton.tap()
         XCTAssertTrue(closeButton.waitForNonExistence(timeout: 3))
 
-        // Escape キーでもシートを閉じられる
-        app.buttons["設定"].firstMatch.tap()
+        // The sheet can also be closed with the Escape key
+        app.buttons["Settings"].firstMatch.tap()
         XCTAssertTrue(closeButton.waitForExistence(timeout: 10))
         app.typeKey(.escape, modifierFlags: [])
         XCTAssertTrue(closeButton.waitForNonExistence(timeout: 3))

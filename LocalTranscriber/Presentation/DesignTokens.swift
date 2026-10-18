@@ -57,8 +57,8 @@ enum DesignTokens {
         static let success = Color.green
         static let error = Color.red
 
-        /// Reduce Transparency 時は不透明なウィンドウ背景色を使う。
-        /// 通常時は .regularMaterial を利用するため、この値は背景色の代替として使う。
+        /// With Reduce Transparency, use the opaque window background color.
+        /// Normally .regularMaterial is used, so this value serves as a substitute background color.
         static let opaqueSurface = Color(NSColor.windowBackgroundColor)
     }
 

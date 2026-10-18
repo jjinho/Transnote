@@ -1,127 +1,128 @@
 # Transnote
 
-macOS 向けのオンデバイス文字起こしアプリ。ローカルの音声ファイルを WhisperKit で処理し、結果を画面表示・エクスポートする。音声データは端末内で完結し、クラウドへ送信しない。Whisper モデルの初回ダウンロード時のみネットワークを使用する。
+An on-device transcription app for macOS. It processes local audio files with WhisperKit and displays and exports the results. Audio data stays on the device and is never sent to the cloud. The network is used only for the initial download of Whisper models.
 
-内部アプリ名は LocalTranscriber、公開名は Transnote。現在のバージョンは **v0.1.5**。
+The internal app name is LocalTranscriber; the public name is Transnote. The current version is **v0.1.5**.
 
 <p align="center">
   <img src="Transnote.png" alt="Transnote" width="128" height="128">
 </p>
 
-## ダウンロード
+## Download
 
-| 方法 | リンク |
+| Method | Link |
 | --- | --- |
-| 最新版 DMG | [GitHub Releases (latest)](https://github.com/T3pp31/Transnote/releases/latest) |
-| 配布ページ | [GitHub Pages](https://t3pp31.github.io/Transnote/) |
+| Latest DMG | [GitHub Releases (latest)](https://github.com/T3pp31/Transnote/releases/latest) |
+| Distribution page | [GitHub Pages](https://t3pp31.github.io/Transnote/) |
 
-> ⚠️ **初回起動時に「マルウェア」という警告が出ることがありますが、これはマルウェアではありません。**
-> Transnote は Apple の有料開発者認証（署名）をせずに配布しているため、macOS の Gatekeeper が「マルウェアでないことを確認できない」と表示します。これは未署名アプリ共通の安全確認の通知で、ウイルス検出ではありません。「完了」で閉じて、下記の手順に進んでください。
+> ⚠️ **You may see a "malware" warning on first launch, but Transnote is not malware.**
+> Transnote is distributed without Apple's paid developer certification (code signing), so macOS Gatekeeper reports that it "cannot verify that it is free of malware." This is a standard safety notice shown for all unsigned apps, not a virus detection. Close it with "Done" and continue with the steps below.
 >
-> ※ この案内は **Transnote について**のものです。他のアプリで同様の警告が出たときは、そのアプリの配布元が信頼できるか必ず確認してください。
+> Note: this guidance applies **to Transnote only**. If another app shows a similar warning, always confirm that its source is trustworthy.
 
-### インストール（要約）
+### Installation (summary)
 
-未署名配布のため、**インストール.command** はダブルクリックや右クリック → 開く では実行できないことがあります。**ターミナルからの実行が確実です。**
+Because the app is distributed unsigned, **インストール.command** ("Install.command") may not run when double-clicked or opened via right-click → Open. **Running it from Terminal is the reliable method.**
 
-1. DMG を開き、**初めにお読みください.txt** を読む
-2. ターミナルで次を1行ずつ実行する:
+1. Open the DMG and read **初めにお読みください.txt** ("Read Me First.txt")
+2. Run the following in Terminal, one line at a time:
 
 ```bash
 xattr -cr "/Volumes/Transnote/"
 bash "/Volumes/Transnote/インストール.command"
 ```
 
-3. DMG を取り出す
-4. 初回起動時に Gatekeeper 警告が出た場合は、右クリック → 開く
-5. 初回利用時に Whisper モデルをダウンロードする
+3. Eject the DMG
+4. If a Gatekeeper warning appears on first launch, right-click → Open
+5. Download a Whisper model the first time you use the app
 
-詳細は [docs/install.md](docs/install.md) を参照。
+See [docs/install.md](docs/install.md) for details.
 
-## 主要機能
+## Key features
 
-| 機能 | 説明 |
+| Feature | Description |
 | --- | --- |
-| ファイル選択・ドラッグ&ドロップ | wav / mp3 / m4a / flac に対応 |
-| オンデバイス文字起こし | WhisperKit によるローカル処理 |
-| モデル選択・ダウンロード | Tiny / Base / Small / Large v3 Turbo (compressed) / Large v3 Turbo |
-| 言語選択 | Auto / Japanese / English |
-| 進捗表示・キャンセル | 準備中〜文字起こし中の各フェーズを表示 |
-| 結果表示・編集・コピー | 文字起こし結果をその場で編集可能 |
-| セグメント再生 | タイムスタンプ付きセグメントの音声再生 |
-| エクスポート | TXT / Markdown / JSON / SRT / VTT |
-| アップデート確認 | 起動時に GitHub Releases を確認 |
+| File selection / drag & drop | Supports wav / mp3 / m4a / flac |
+| On-device transcription | Local processing with WhisperKit |
+| Model selection / download | Tiny / Base / Small / Large v3 Turbo (compressed) / Large v3 Turbo |
+| Language selection | Auto / Japanese / English |
+| UI languages | Japanese and American English (follows the macOS language setting; other languages fall back to English) |
+| Progress display / cancel | Shows each phase, from preparing to transcribing |
+| View / edit / copy results | Transcripts can be edited in place |
+| Segment playback | Plays audio for timestamped segments |
+| Export | TXT / Markdown / JSON / SRT / VTT |
+| Update check | Checks GitHub Releases at launch |
 
-## プライバシー
+## Privacy
 
-- 音声ファイルの内容は端末内で処理され、外部サーバーへ送信されない
-- ネットワークは Whisper モデルのダウンロードとアップデート確認時のみ使用する
-- App Sandbox 上で動作する
+- Audio file contents are processed on the device and are not sent to external servers
+- The network is used only to download Whisper models and to check for updates
+- Runs in the App Sandbox
 
-## ステータス
+## Status
 
-| 項目 | 状態 |
+| Item | State |
 | --- | --- |
-| バージョン | v0.1.5 |
-| UI/UX 改善 (v0.1.5) | [#114](https://github.com/T3pp31/Transnote/issues/114) で追跡、PR [#115](https://github.com/T3pp31/Transnote/pull/115)–[#132](https://github.com/T3pp31/Transnote/pull/132) 作成済み |
-| 実装 | SwiftUI アプリ、テスト、CI 稼働中 |
-| 配布 | 未署名 DMG（GitHub Actions → GitHub Releases / Pages） |
+| Version | v0.1.5 |
+| UI/UX improvements (v0.1.5) | Tracked in [#114](https://github.com/T3pp31/Transnote/issues/114); PRs [#115](https://github.com/T3pp31/Transnote/pull/115)–[#132](https://github.com/T3pp31/Transnote/pull/132) opened |
+| Implementation | SwiftUI app, tests, and CI in operation |
+| Distribution | Unsigned DMG (GitHub Actions → GitHub Releases / Pages) |
 
-### 今後の予定
+### Upcoming
 
-| バージョン | 内容 |
+| Version | Scope |
 | --- | --- |
-| v0.3 | 履歴、設定画面、長時間音声対応 |
-| v0.4 | モデル管理の強化、エラー処理の改善 |
-| v1.0 | 配布導線の安定化（署名は任意） |
-| v1.1 | 動画対応、話者分離、録音 |
+| v0.3 | History, settings screen, long-audio support |
+| v0.4 | Improved model management and error handling |
+| v1.0 | Stabilized distribution flow (signing optional) |
+| v1.1 | Video support, speaker diarization, recording |
 
-詳細は [docs/roadmap.md](docs/roadmap.md) を参照。
+See [docs/roadmap.md](docs/roadmap.md) for details.
 
-## 技術スタック
+## Tech stack
 
-| 領域 | 技術 |
+| Area | Technology |
 | --- | --- |
 | UI | SwiftUI |
-| 文字起こし | [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift) 0.18.0（Package.resolved で固定） |
-| 音声処理 | AVFoundation |
-| 設定 | `Config/Defaults.plist` + UserDefaults |
-| データ永続化 | ファイルシステム（`~/Library/Application Support/LocalTranscriber/`） |
-| テスト | XCTest |
-| CI/CD | GitHub Actions（macOS 15, Xcode 16.4） |
-| 配布 | 未署名 DMG + `インストール.command` |
+| Transcription | [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift) 0.18.0 (pinned in Package.resolved) |
+| Audio processing | AVFoundation |
+| Settings | `Config/Defaults.plist` + UserDefaults |
+| Persistence | File system (`~/Library/Application Support/LocalTranscriber/`) |
+| Testing | XCTest |
+| CI/CD | GitHub Actions (macOS 15, Xcode 16.4) |
+| Distribution | Unsigned DMG + `インストール.command` |
 
-Python や Rust は採用しない。Xcode プロジェクトの再生成に Python 3 を使用する。
+Python and Rust are not used in the app. Python 3 is used to regenerate the Xcode project.
 
-## 要件
+## Requirements
 
-| 項目 | バージョン |
+| Item | Version |
 | --- | --- |
-| macOS | 14.0 以降 |
-| Xcode | 16.0 以降（CI は 16.4） |
+| macOS | 14.0 or later |
+| Xcode | 16.0 or later (CI uses 16.4) |
 
-WhisperKit は `argmaxinc/argmax-oss-swift` の Swift Package として提供され、`LocalTranscriber.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` でバージョン 0.18.0（revision `e2adabb`）に固定している。前提環境は公式 README に準拠する。
+WhisperKit is provided as a Swift Package from `argmaxinc/argmax-oss-swift` and is pinned to version 0.18.0 (revision `e2adabb`) in `LocalTranscriber.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. Prerequisites follow the official README.
 
-## プロジェクト構成
+## Project structure
 
 ```text
 Transnote/
-├── LocalTranscriber/       # アプリ本体（Domain / Services / Presentation）
-├── LocalTranscriberTests/  # 単体・統合テスト
-├── Config/                 # アプリ設定・配布設定
-├── docs/                   # 設計・運用ドキュメント
-├── scripts/                # ビルド・配布スクリプト
-├── site/                   # GitHub Pages ランディング
+├── LocalTranscriber/       # App (Domain / Services / Presentation)
+├── LocalTranscriberTests/  # Unit and integration tests
+├── Config/                 # App and distribution settings
+├── docs/                   # Design and operations docs
+├── scripts/                # Build and distribution scripts
+├── site/                   # GitHub Pages landing page
 └── .github/workflows/      # CI / Release / Pages
 ```
 
-## 開発者向けビルド
+## Building for development
 
 ```bash
-# Xcode プロジェクトを再生成する場合
+# To regenerate the Xcode project
 python3 scripts/generate_xcodeproj.py
 
-# テスト（署名なし）
+# Tests (unsigned)
 xcodebuild test \
   -project LocalTranscriber.xcodeproj \
   -scheme LocalTranscriber \
@@ -129,7 +130,7 @@ xcodebuild test \
   CODE_SIGNING_ALLOWED=NO \
   -derivedDataPath DerivedData
 
-# Debug ビルド
+# Debug build
 xcodebuild build \
   -project LocalTranscriber.xcodeproj \
   -scheme LocalTranscriber \
@@ -138,21 +139,21 @@ xcodebuild build \
   CODE_SIGNING_ALLOWED=NO
 ```
 
-Release ビルドと DMG 作成は `v*.*.*` タグの push で GitHub Actions が自動実行する。未署名配布のため GitHub Secrets は不要。運用詳細は [docs/distribution.md](docs/distribution.md) を参照。
+Release builds and DMG creation run automatically in GitHub Actions when a `v*.*.*` tag is pushed. No GitHub Secrets are needed because distribution is unsigned. See [docs/distribution.md](docs/distribution.md) for operational details.
 
-## ドキュメント
+## Documentation
 
-| ファイル | 内容 |
+| File | Contents |
 | --- | --- |
-| [docs/install.md](docs/install.md) | エンドユーザー向けインストール手順 |
-| [docs/distribution.md](docs/distribution.md) | Release ビルド・DMG 配布の運用 |
-| [docs/architecture.md](docs/architecture.md) | アプリ構成、モジュール設計、画面設計 |
-| [docs/roadmap.md](docs/roadmap.md) | 実装フェーズ、スケジュール、拡張計画 |
-| [docs/spec-v0.1.md](docs/spec-v0.1.md) | v0.1 の仕様とスコープ |
+| [docs/install.md](docs/install.md) | Installation steps for end users |
+| [docs/distribution.md](docs/distribution.md) | Release builds and DMG distribution |
+| [docs/architecture.md](docs/architecture.md) | App structure, module design, screen design |
+| [docs/roadmap.md](docs/roadmap.md) | Implementation phases, schedule, extension plans |
+| [docs/spec-v0.1.md](docs/spec-v0.1.md) | v0.1 specification and scope |
 
-## 参考リンク
+## References
 
-- [WhisperKit（argmax-oss-swift）](https://github.com/argmaxinc/argmax-oss-swift) — Swift Package、モデル管理、文字起こし API
-- [WhisperKit ドキュメント](https://www.mintlify.com/explore/argmaxinc/WhisperKit) — ストリーミング、VAD、タイムスタンプ
-- [macOS App Sandbox でのファイルアクセス](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox) — Security-scoped bookmark 設計の参考
-- [Developer ID](https://developer.apple.com/support/developer-id/) — Mac App Store 外配布時の署名・公証
+- [WhisperKit (argmax-oss-swift)](https://github.com/argmaxinc/argmax-oss-swift) — Swift Package, model management, transcription API
+- [WhisperKit documentation](https://www.mintlify.com/explore/argmaxinc/WhisperKit) — Streaming, VAD, timestamps
+- [File access in the macOS App Sandbox](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox) — Reference for the security-scoped bookmark design
+- [Developer ID](https://developer.apple.com/support/developer-id/) — Signing and notarization for distribution outside the Mac App Store

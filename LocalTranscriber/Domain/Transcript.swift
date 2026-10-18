@@ -1,8 +1,8 @@
 import Foundation
 
 struct Transcript: Codable, Identifiable, Sendable {
-    /// JSON エクスポートのスキーマバージョン。
-    /// 将来のフィールド追加時はインクリメントする。
+    /// Schema version of the JSON export.
+    /// Increment when fields are added in the future.
     static let currentSchemaVersion = 1
 
     let id: UUID
@@ -11,11 +11,11 @@ struct Transcript: Codable, Identifiable, Sendable {
     let createdAt: Date
     var fullText: String
     var segments: [TranscriptSegment]
-    /// 文字起こしに使用したモデル ID（モデル設定の `id`）。
+    /// Model ID used for transcription (the model setting's `id`).
     var modelID: String?
-    /// 元音声ファイルの識別用フィンガープリント（SHA256）。
+    /// Fingerprint (SHA256) identifying the source audio file.
     var sourceFileFingerprint: String?
-    /// 最後に編集された日時（未編集なら nil）。
+    /// Date and time of the last edit (nil if unedited).
     var updatedAt: Date?
     let schemaVersion: Int
 
@@ -43,7 +43,7 @@ struct Transcript: Codable, Identifiable, Sendable {
         self.schemaVersion = schemaVersion
     }
 
-    // 既存 JSON（schemaVersion なし）も読み込めるよう decodeIfPresent を使う。
+    // Use decodeIfPresent so existing JSON (without schemaVersion) can still be loaded.
     private enum CodingKeys: String, CodingKey {
         case id, sourceFileName, language, createdAt, fullText, segments, modelID, sourceFileFingerprint, updatedAt, schemaVersion
     }

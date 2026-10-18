@@ -11,8 +11,8 @@ fail() {
   exit 1
 }
 
-# --check: 実インストールせずに、前提条件（設定・DMG・アプリ・チェックサム）の
-# 検証のみを行うテスト用モード。TRANSNOTE_INSTALL_DIR でインストール先を注入できる。
+# --check: test mode that only validates prerequisites (settings, DMG, app, checksum)
+# without actually installing. The install destination can be injected with TRANSNOTE_INSTALL_DIR.
 if [[ "${1:-}" == "--check" ]]; then
   if [[ ! -f "$PLIST" ]]; then
     echo "FAIL: distribution.plist not found" >&2
@@ -113,7 +113,7 @@ remove_installed_apps() {
   shopt -s nullglob
   for candidate in "${APPLICATIONS_DIR}/${base_name}.app" "${APPLICATIONS_DIR}/${base_name} "*.app; do
     if [[ -d "$candidate" ]]; then
-      # 削除前に Bundle ID を検証し、同名の無関係アプリを誤って削除しない。
+      # Verify the Bundle ID before deleting, so an unrelated app with the same name is not deleted by mistake.
       local candidate_id
       candidate_id="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${candidate}/Contents/Info.plist" 2>/dev/null || true)"
       if [[ -z "$candidate_id" ]]; then
@@ -154,8 +154,8 @@ osascript -e "tell application \"${APP_NAME}\" to quit" >/dev/null 2>&1 || true
 sleep 1
 
 # --- transactional install ---
-# 新バージョンを一時ディレクトリへコピーし、成功を確認してから旧バージョンを退避・置換する。
-# 途中で失敗した場合は旧バージョンを復元する。
+# Copy the new version to a temporary directory, confirm success, then move aside and replace the old version.
+# If anything fails partway, restore the old version.
 TMP_STAGE="${TMPDIR:-/tmp}/transnote-install-$$";
 BACKUP_DIR="${TMPDIR:-/tmp}/transnote-backup-$$";
 mkdir -p "$TMP_STAGE" "$BACKUP_DIR"
@@ -191,11 +191,11 @@ if ! ditto "${TMP_STAGE}/${APP_NAME}.app" "$TARGET_APP"; then
   fail "新バージョンの配置に失敗しました。旧バージョンを復元します。"
 fi
 
-# すべての extended attributes を削除せず、Gatekeeper が参照する quarantine 属性のみを対象にする。
-# 他の拡張属性（Finder や署名情報など）は残す。
+# Rather than removing all extended attributes, target only the quarantine attribute that Gatekeeper checks.
+# Other extended attributes (Finder, signature information, etc.) are kept.
 remove_quarantine_attribute "$TARGET_APP"
 
-# 成功時はバックアップを破棄
+# On success, discard the backup
 rm -rf "$BACKUP_DIR" "$TMP_STAGE"
 trap - EXIT
 
