@@ -7,12 +7,12 @@ enum TranscriptPartialTextBuilder {
             .joined(separator: " ")
     }
 
-    /// 新規ウィンドウのテキストを累積テキストにインクリメンタルに結合して返す。
+    /// Incrementally joins a new window's text onto the accumulated text and returns it.
     ///
-    /// `joinedPresentableText` はウィンドウ内で `presentableText`（サニタイズ済み・特殊トークン残骸なし）
-    /// のみを選択するため、各ウィンドウは「クリーンなテキスト」として扱える。ウィンドウ間は常に単一の
-    /// 空白で結合されるため、累積テキスト全体を再サニタイズする O(N^2 x 正規表現) コストが不要になる。
-    /// 従来実装との挙動同一は差分テスト（TranscriptPartialTextBuilderTests）が保証する。
+    /// `joinedPresentableText` selects only `presentableText` (sanitized, with no leftover special tokens)
+    /// within each window, so each window can be treated as "clean text". Windows are always joined with a single
+    /// space, which avoids the O(N^2 x regex) cost of re-sanitizing the entire accumulated text.
+    /// Behavioral equivalence with the previous implementation is guaranteed by differential tests (TranscriptPartialTextBuilderTests).
     static func appendPresentableWindowText(
         from segmentTexts: [String],
         to accumulated: inout String

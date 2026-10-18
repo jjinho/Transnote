@@ -1,8 +1,8 @@
-# アーキテクチャ
+# Architecture
 
-Transnote（内部アプリ名: LocalTranscriber）は **SwiftUI + WhisperKit** のネイティブ macOS アプリとして設計する。Python や Rust は v1 では採用しない。
+Transnote (internal app name: LocalTranscriber) is designed as a native macOS app built with **SwiftUI + WhisperKit**. Python and Rust are not used in v1.
 
-## 推奨アプリ構成（実装済み）
+## Recommended app structure (implemented)
 
 ```text
 LocalTranscriber/
@@ -50,28 +50,28 @@ LocalTranscriber/
    ├─ ExportServiceTests.swift
    ├─ TranscriptModelTests.swift
    ├─ TranscriptionSmokeTests.swift
-   └─ ...（単体テスト群）
+   └─ ... (unit tests)
 ```
 
-## 主要モジュール設計（実装済み）
+## Key module design (implemented)
 
 ### WhisperKitTranscriber
 
-WhisperKit を直接触る部分はここに閉じ込める。
+All code that touches WhisperKit directly is confined here.
 
-責務:
+Responsibilities:
 
 ```text
-- WhisperKit初期化
-- モデル指定
-- 言語指定
-- 音声ファイルの文字起こし
-- 進捗通知
-- キャンセル
-- エラー整形
+- WhisperKit initialization
+- Model selection
+- Language selection
+- Transcribing audio files
+- Progress notifications
+- Cancellation
+- Error formatting
 ```
 
-実装インターフェース:
+Interface:
 
 ```swift
 protocol Transcriber {
@@ -80,48 +80,48 @@ protocol Transcriber {
 }
 ```
 
-WhisperKit では、モデルを指定しない場合にデバイス向けの推奨モデルを自動選択・ダウンロードでき、明示的に `WhisperKitConfig(model:)` でモデル指定する例も示されている。([GitHub][1])
+WhisperKit can automatically select and download the recommended model for the device when no model is specified, and its examples also show specifying a model explicitly with `WhisperKitConfig(model:)`. ([GitHub][1])
 
 ### ModelAvailabilityService / ModelDownloadService
 
-モデル管理は UX 上かなり重要。
+Model management matters a great deal for UX.
 
-実装済み機能:
-
-```text
-- 利用可能モデル一覧
-- 未ダウンロード / ダウンロード済み状態
-- モデルダウンロード
-- モデルフォルダ選択（同スコア時は決定的）
-- モデルファイル整合性検証
-```
-
-構想（未実装）:
+Implemented:
 
 ```text
-- モデル容量表示
-- 推奨モデル表示
-- モデル削除
-- 初回起動時のモデル準備
+- List of available models
+- Not downloaded / downloaded state
+- Model download
+- Model folder selection (deterministic on tied scores)
+- Model file integrity verification
 ```
 
-初期ラインナップ:
+Planned (not implemented):
 
-| 表示名                       | 想定用途         |
-| ------------------------- | ------------ |
-| Tiny                      | 動作確認・高速プレビュー |
-| Base                      | 軽量利用         |
-| Small                     | 日常利用         |
-| Large v3 Turbo compressed | 精度重視         |
-| Large v3 Turbo            | macOS高性能機向け  |
+```text
+- Model size display
+- Recommended model display
+- Model deletion
+- Model preparation on first launch
+```
 
-公式 README では、`large-v3-v20240930_626MB` が多言語精度重視の推奨、`tiny` がデバッグ用の最速ワークフローとして案内されている。([GitHub][1])
+Initial lineup:
+
+| Display name              | Intended use                  |
+| ------------------------- | ----------------------------- |
+| Tiny                      | Smoke testing, fast preview   |
+| Base                      | Lightweight use               |
+| Small                     | Everyday use                  |
+| Large v3 Turbo compressed | Accuracy-focused              |
+| Large v3 Turbo            | High-performance Macs         |
+
+The official README recommends `large-v3-v20240930_626MB` for multilingual accuracy and `tiny` as the fastest workflow for debugging. ([GitHub][1])
 
 ### AudioFileService / AudioImportService
 
-音声・動画ファイルの扱いを担当する。
+Handles audio and video files.
 
-現状の実装:
+Currently implemented:
 
 ```text
 - wav
@@ -130,22 +130,22 @@ WhisperKit では、モデルを指定しない場合にデバイス向けの推
 - flac
 ```
 
-構想（未実装）:
+Planned (not implemented):
 
 ```text
 - mp4
 - mov
-- 音声抽出
-- 音声波形プレビュー
+- Audio extraction
+- Audio waveform preview
 ```
 
-WhisperKit が案内している入力例は WAV / MP3 / M4A / FLAC なので、まずはこの 4 形式を正式対応にする。([Mintlify][2])
+The input examples WhisperKit documents are WAV / MP3 / M4A / FLAC, so these four formats are officially supported first. ([Mintlify][2])
 
 ### ExportService
 
-出力は WhisperKit 依存にせず、自前で安定実装する。
+Export is implemented in-house for stability rather than depending on WhisperKit.
 
-対応形式:
+Supported formats:
 
 ```text
 - TXT
@@ -155,7 +155,7 @@ WhisperKit が案内している入力例は WAV / MP3 / M4A / FLAC なので、
 - JSON
 ```
 
-`Transcript` はこの形で持つのが扱いやすい。
+`Transcript` is easiest to work with in this shape:
 
 ```swift
 struct Transcript: Codable, Identifiable {
@@ -172,39 +172,47 @@ struct TranscriptSegment: Codable, Identifiable {
     let startTime: TimeInterval
     let endTime: TimeInterval
     var text: String
+    var words: [TranscriptWord]?  // nil once the text is edited
+}
+
+struct TranscriptWord: Codable {
+    let text: String
+    let startTime: TimeInterval
+    let endTime: TimeInterval
+    let probability: Double       // model confidence, 0–1
 }
 ```
 
-ワードレベルタイムスタンプが必要になる字幕編集機能は v1.1 以降でよい。WhisperKit ドキュメント上はワードレベルタイムスタンプが主要機能として案内されているが、MVP ではまずセグメント単位で十分。([Mintlify][2])
+Transcription requests WhisperKit's word-level timestamps (`DecodingOptions.wordTimestamps`), and each segment keeps its words with timings and a confidence score. The score is the geometric mean of the word's token probabilities: it shows how sure the model was, not whether the word is correct. Words below 0.5 are flagged in the segment view, and the JSON export (schema version 2) includes every word. For Japanese and Chinese, WhisperKit splits text into roughly one unit per character, not per word. Subtitle editing at word level can wait until v1.1 or later. ([Mintlify][2])
 
-## 画面設計
+## Screen design
 
-### MainWindow（実装済み）
+### MainWindow (implemented)
 
 ```text
 ┌──────────────────────────────────────────────┐
-│ Toolbar: モデル / 言語 / 開始 / 保存          │
+│ Toolbar: Model / Language / Start / Save     │
 ├──────────────────────────────────────────────┤
-│ 文字起こし結果エディタ（セグメント再生可）       │
-│（履歴・ファイルリストは未実装）               │
+│ Transcript editor (segment playback)         │
+│ (history and file list not implemented)      │
 ├──────────────────────────────────────────────┤
-│ 進捗バー / 状態 / キャンセル                  │
+│ Progress bar / status / cancel               │
 └──────────────────────────────────────────────┘
 ```
 
-### 必須 UI
+### Required UI
 
-| UI     | 内容                           |
-| ------ | ---------------------------- |
-| ファイル投入 | ドラッグ&ドロップ、ファイル選択             |
-| モデル選択  | Tiny / Base / Small / Large系 |
-| 言語選択   | Auto / Japanese / English    |
-| 結果表示   | 編集可能なテキストビュー                 |
-| 進捗表示   | 初期化中、モデルDL中、文字起こし中、完了        |
-| 保存     | TXT / SRT / VTT / JSON       |
-| 履歴     | 過去の文字起こし結果（未実装）              |
+| UI               | Contents                                                     |
+| ---------------- | ------------------------------------------------------------ |
+| File input       | Drag & drop, file selection                                  |
+| Model selection  | Tiny / Base / Small / Large variants                         |
+| Language         | Auto / Japanese / English                                    |
+| Results          | Editable text view                                           |
+| Progress         | Initializing, downloading model, transcribing, complete      |
+| Save             | TXT / SRT / VTT / JSON                                       |
+| History          | Past transcription results (not implemented)                 |
 
-macOS App Sandbox ではアプリのファイルアクセスが制限されるため、ユーザーが選択したファイルやフォルダを扱う設計にする。永続的にアクセスしたい出力先を保存する場合は、Security-scoped bookmark を使う前提で設計する。([Apple Developer][3])
+The macOS App Sandbox restricts an app's file access, so the design works with files and folders the user selects. To save an output location for persistent access, the design assumes security-scoped bookmarks. ([Apple Developer][3])
 
 [1]: https://github.com/argmaxinc/argmax-oss-swift "GitHub - argmaxinc/argmax-oss-swift: On-device Speech AI for Apple Silicon · GitHub"
 [2]: https://www.mintlify.com/explore/argmaxinc/WhisperKit "WhisperKit Documentation - WhisperKit"

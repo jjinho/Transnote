@@ -1,57 +1,57 @@
-# 配布運用
+# Distribution
 
-Transnote の Release ビルド、DMG 作成、GitHub Releases 公開は GitHub Actions で自動化しています。現在は **未署名ビルド** を配布しています。
+Transnote's Release builds, DMG creation, and GitHub Releases publishing are automated with GitHub Actions. **Unsigned builds** are currently distributed.
 
-## 配布フロー概要
+## Distribution flow overview
 
 ```text
-vX.Y.Z タグ push または workflow_dispatch
-  → テスト
-  → Release archive（署名なし）
-  → Transnote.app を取り出し
-  → DMG 作成（Transnote.app + インストール.command + Applications リンク）
-  → SHA256 チェックサム生成
-  → SBOM 生成（Transnote-<version>.cdx.json）
-  → GitHub Release へアップロード（DMG + .sha256 + SBOM、本文にハッシュ記載）
+vX.Y.Z tag push or workflow_dispatch
+  → Tests
+  → Release archive (unsigned)
+  → Extract Transnote.app
+  → Create DMG (Transnote.app + インストール.command + Applications link)
+  → Generate SHA256 checksums
+  → Generate SBOM (Transnote-<version>.cdx.json)
+  → Upload to GitHub Release (DMG + .sha256 + SBOM, with hashes in the release notes)
 ```
 
-GitHub Pages は `main` ブランチの `site/` 更新時に自動デプロイされ、[releases/latest](https://github.com/T3pp31/Transnote/releases/latest) へ誘導します。
+GitHub Pages is deployed automatically when `site/` changes on the `main` branch, and directs users to [releases/latest](https://github.com/T3pp31/Transnote/releases/latest).
 
 ## GitHub Secrets
 
-未署名配布では **GitHub Secrets は不要** です。Release workflow はそのまま実行できます。
+Unsigned distribution **requires no GitHub Secrets**. The Release workflow runs as-is.
 
-将来、Developer ID 署名と Notarization を導入する場合は、[Apple Developer Program](https://developer.apple.com/programs/) への加入と CI 用証明書（`APPLE_CERTIFICATE_BASE64` 等）の GitHub Secrets 設定が必要です。現時点では SHA256 チェックサム配布で整合性確認を提供しています。
+If Developer ID signing and notarization are introduced in the future, you will need to join the [Apple Developer Program](https://developer.apple.com/programs/) and configure GitHub Secrets for the CI certificate (`APPLE_CERTIFICATE_BASE64`, etc.). For now, integrity verification is provided by distributing SHA256 checksums.
 
-## リリース手順
+## Release steps
 
-### タグからリリース
+### Release from a tag
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-`v*.*.*` 形式のタグ push で `.github/workflows/release.yml` が起動します。
+Pushing a tag of the form `v*.*.*` triggers `.github/workflows/release.yml`.
 
-### 手動リリース
+### Manual release
 
-1. GitHub の **Actions → Release → Run workflow** を開く
-2. `version` に `v0.1.0` 形式のタグ名を入力する
-3. workflow 完了後、GitHub Releases に `Transnote-<version>.dmg` が添付される
+1. Open **Actions → Release → Run workflow** on GitHub
+2. Enter a tag name of the form `v0.1.0` in `version`
+3. When the workflow completes, `Transnote-<version>.dmg` is attached to the GitHub Release
 
-## ローカル補助スクリプト
+## Local helper scripts
 
-| スクリプト | 用途 |
+| Script | Purpose |
 | --- | --- |
-| `scripts/export-release-app.sh` | `.xcarchive` から `Transnote.app` を取り出す |
-| `scripts/create-dmg.sh` | `Transnote.app` から `Transnote-<version>.dmg` を作成 |
-| `scripts/generate-sbom.sh` | Syft で CycloneDX JSON 形式の SBOM を生成 |
-| `scripts/install-transnote.command` | DMG 同梱用インストールスクリプト（旧版削除→新版配置） |
-| `Config/distribution.plist` | 配布時のアプリ名・旧名・インストールスクリプト名 |
-| `Config/sbom.plist` | SBOM 生成設定（Syft バージョン・出力形式・パス） |
+| `scripts/export-release-app.sh` | Extracts `Transnote.app` from an `.xcarchive` |
+| `scripts/create-dmg.sh` | Creates `Transnote-<version>.dmg` from `Transnote.app` |
+| `scripts/generate-sbom.sh` | Generates an SBOM in CycloneDX JSON format with Syft |
+| `scripts/install-transnote.command` | Install script bundled in the DMG (removes old version → places new version) |
+| `Config/distribution.plist` | App name, former name, and install script name used for distribution |
+| `Config/sbom.plist` | SBOM generation settings (Syft version, output format, paths) |
 
-### archive の例
+### Archive example
 
 ```bash
 xcodebuild archive \
@@ -64,7 +64,7 @@ xcodebuild archive \
   -derivedDataPath DerivedData
 ```
 
-### export / DMG の例
+### Export / DMG example
 
 ```bash
 ./scripts/export-release-app.sh \
@@ -77,63 +77,63 @@ xcodebuild archive \
   --output build/dist
 ```
 
-### SBOM の例
+### SBOM example
 
-CI では `Package.resolved`（宣言依存のロックファイル）を Ubuntu 上で、Release では配布用 `Transnote.app` を macOS 上でスキャンします。Whisper モデルなどランタイムで取得するコンポーネントは SBOM 対象外です。`generate-sbom.sh` は macOS では PlistBuddy、Linux では python3 + plistlib で `Config/sbom.plist` を読みます。
+CI scans `Package.resolved` (the lockfile of declared dependencies) on Ubuntu; Release scans the distributed `Transnote.app` on macOS. Components fetched at runtime, such as Whisper models, are outside the SBOM's scope. `generate-sbom.sh` reads `Config/sbom.plist` with PlistBuddy on macOS and with python3 + plistlib on Linux.
 
 ```bash
-# CI 相当（依存ロックのみ）
+# Equivalent to CI (dependency lock only)
 ./scripts/generate-sbom.sh --mode ci
 
-# Release 相当（.app が必要）
+# Equivalent to Release (requires the .app)
 ./scripts/generate-sbom.sh --mode release --version 0.1.0
 ```
 
-生成物は `build/sbom/` に出力されます。CI では artifact `sbom-cyclonedx` として保存されます（保持 30 日）。
+Output is written to `build/sbom/`. In CI it is saved as the artifact `sbom-cyclonedx` (retained for 30 days).
 
-`generate-sbom.sh` は生成後に CycloneDX の `library` 型 `components` が 1 件以上あることを検証し、0 件の場合は非ゼロ終了で CI / Release を失敗させます（Syft の退行やスキャン失敗で空 SBOM が artifact に残るのを防ぐ）。
+After generating, `generate-sbom.sh` verifies that there is at least one CycloneDX `components` entry of type `library`; if there are none, it exits non-zero and fails CI / Release (this prevents an empty SBOM from being left as an artifact due to a Syft regression or scan failure).
 
-## Pages の有効化
+## Enabling Pages
 
-初回のみ、リポジトリ設定で GitHub Pages の Source を **GitHub Actions** に設定してください。以降は `pages.yml` が `site/` をデプロイします。
+The first time only, set the GitHub Pages Source to **GitHub Actions** in the repository settings. After that, `pages.yml` deploys `site/`.
 
-## 成果物
+## Artifacts
 
-| ファイル | 説明 |
+| File | Description |
 | --- | --- |
-| `Transnote-<version>.dmg` | 未署名アプリを格納した配布用 DMG |
-| `Transnote.dmg` | 最新版向けエイリアス DMG（内容は versioned と同一） |
-| `Transnote-<version>.dmg.sha256` | versioned DMG の SHA256 チェックサム |
-| `Transnote.dmg.sha256` | latest DMG の SHA256 チェックサム |
-| `Transnote-<version>.cdx.json` | CycloneDX JSON 形式の SBOM（配布バイナリベース、Release 添付） |
-| `Transnote-sbom.cdx.json` | CycloneDX JSON 形式の SBOM（依存ロックベース、CI artifact） |
+| `Transnote-<version>.dmg` | Distribution DMG containing the unsigned app |
+| `Transnote.dmg` | Alias DMG for the latest version (same contents as the versioned one) |
+| `Transnote-<version>.dmg.sha256` | SHA256 checksum of the versioned DMG |
+| `Transnote.dmg.sha256` | SHA256 checksum of the latest DMG |
+| `Transnote-<version>.cdx.json` | SBOM in CycloneDX JSON format (based on the distributed binary, attached to the Release) |
+| `Transnote-sbom.cdx.json` | SBOM in CycloneDX JSON format (based on the dependency lock, CI artifact) |
 | `Transnote.app` | Bundle ID `com.transnote.LocalTranscriber` |
-| `インストール.command` | DMG 内のワンクリックインストーラー（旧版を削除してから配置） |
-| `初めにお読みください.txt` | Gatekeeper 回避手順（未署名配布向け） |
-| `distribution.plist` | DMG 内に同梱される配布設定（インストールスクリプトが参照） |
+| `インストール.command` | One-click installer in the DMG ("Install.command"; removes the old version before placing the new one) |
+| `初めにお読みください.txt` | Gatekeeper workaround steps for unsigned distribution ("Read Me First.txt") |
+| `distribution.plist` | Distribution settings bundled in the DMG (read by the install script) |
 
-## ユーザー向け注意
+## Notes for users
 
-未署名アプリは初回起動時に macOS の Gatekeeper 警告が出ることがあります。**インストール.command** も同様に、ダブルクリックでは「開いていません」とブロックされる場合があります。右クリック → 開く でも通らないことがあるため、DMG 内の `初めにお読みください.txt` または [docs/install.md](install.md) の **ターミナル実行手順**（`xattr -cr` のあと `bash`）を案内してください。
+Unsigned apps may trigger a macOS Gatekeeper warning on first launch. Likewise, **インストール.command** may be blocked with "Not Opened" when double-clicked. Since right-click → Open may not work either, point users to `初めにお読みください.txt` in the DMG or the **Terminal steps** in [docs/install.md](install.md) (`xattr -cr` followed by `bash`).
 
-インストールスクリプトは配置後に `xattr -cr` で Applications 内アプリの隔離属性を除去するため、インストール直後の起動がスムーズになります。
+After placing the app, the install script runs `xattr -cr` to remove the quarantine attribute from the app in Applications, so the first launch after installation goes smoothly.
 
-## 検証コマンド
+## Verification commands
 
 ```bash
-# ダウンロード後の整合性確認（ユーザー向け）
+# Integrity check after download (for users)
 shasum -a 256 -c Transnote-0.1.0.dmg.sha256
 
-# SBOM の妥当性確認（開発者向け）
-# generate-sbom.sh 実行時にも library components の件数チェックが行われる
+# SBOM validity check (for developers)
+# generate-sbom.sh also checks the number of library components when it runs
 jq -e '[.components[]? | select(.type == "library")] | length > 0' build/sbom/Transnote-sbom.cdx.json
 
 hdiutil verify Transnote-0.1.0.dmg
 ls -la build/release/Transnote.app/Contents/MacOS/Transnote
 
-# DMG 内容の確認
+# Check the DMG contents
 hdiutil attach Transnote-0.1.0.dmg -mountpoint /tmp/transnote-dmg
 ls -la /tmp/transnote-dmg
-# Transnote.app, インストール.command, 初めにお読みください.txt, distribution.plist, Applications があること
+# Should contain Transnote.app, インストール.command, 初めにお読みください.txt, distribution.plist, Applications
 hdiutil detach /tmp/transnote-dmg
 ```

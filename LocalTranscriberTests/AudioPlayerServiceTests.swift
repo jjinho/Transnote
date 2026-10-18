@@ -79,8 +79,8 @@ final class AudioPlayerServiceTests: XCTestCase {
         XCTAssertFalse(service.hasActiveTimeObserver)
     }
 
-    // セグメントを素早く2回連続でタップしても、後者のセグメントの再生が開始されること
-    // （状態遷移 isPlaying / hasActiveTimeObserver で検証）
+    // Even if segments are tapped twice in quick succession, playback of the latter segment starts
+    // (verified via the isPlaying / hasActiveTimeObserver state transitions)
     func testConsecutivePlaySegmentStartsLatestSegment() async throws {
         service.load(url: tempAudioURL)
         service.playSegment(start: 0.0, end: 0.1)
@@ -96,8 +96,8 @@ final class AudioPlayerServiceTests: XCTestCase {
         XCTAssertFalse(service.hasActiveTimeObserver)
     }
 
-    // 連続で playSegment を呼んでも、finish コールバックが誤って早期に発火せず、
-    // 後から呼んだセグメントの終了時にだけ発火すること
+    // Even with consecutive playSegment calls, the finish callback does not fire early by mistake,
+    // and fires only when the later segment ends
     func testConsecutivePlaySegmentFiresFinishCallbackOnlyForLatestSegment() async throws {
         var firstFinished = false
         var secondFinished = false
@@ -110,17 +110,17 @@ final class AudioPlayerServiceTests: XCTestCase {
             secondFinished = true
         }
 
-        // 後者のセグメントの再生が開始される（状態遷移で確認）
+        // Playback of the latter segment starts (confirmed via state transitions)
         _ = await waitUntil(timeout: 2.0) {
             self.service.isPlaying && self.service.hasActiveTimeObserver
         }
 
-        // 後者のセグメント終端を迎える前に、完了コールバックが誤って発火していないこと
+        // The completion callback has not fired by mistake before the latter segment reaches its end
         try? await Task.sleep(nanoseconds: 200_000_000)
         XCTAssertFalse(firstFinished, "古いセグメントの完了コールバックは発火してはならない")
         XCTAssertFalse(secondFinished, "後者のセグメント終端前に完了コールバックが発火してはならない")
 
-        // 後者のセグメントの終了時にだけ完了コールバックが発火し、再生状態がリセットされること
+        // The completion callback fires only when the latter segment ends, and the playback state is reset
         let secondCompleted = await waitUntil(timeout: 3.0) {
             secondFinished
         }

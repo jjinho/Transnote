@@ -25,7 +25,7 @@ final class UpdateCheckViewModel: ObservableObject {
         }
     }
 
-    /// メニューからの手動確認。起動時フラグに関係なく常にチェックする。
+    /// Manual check from the menu. Always checks, regardless of the launch flag.
     func checkNow() {
         Task {
             let offer = await updateChecker.checkForUpdate()

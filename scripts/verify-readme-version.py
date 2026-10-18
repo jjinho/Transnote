@@ -29,9 +29,11 @@ def read_version_from_pbxproj() -> str:
 
 def read_version_from_readme() -> str:
     content = README.read_text()
-    matches = re.findall(r"当前版本.*?v([0-9]+\.[0-9]+\.[0-9]+)", content)
+    matches = re.findall(r"The current version is \*\*v([0-9]+\.[0-9]+\.[0-9]+)\*\*", content)
     if not matches:
-        # 日本語の記述（現在のバージョンは vX.Y.Z）を探す
+        matches = re.findall(r"当前版本.*?v([0-9]+\.[0-9]+\.[0-9]+)", content)
+    if not matches:
+        # Look for the Japanese wording (現在のバージョンは vX.Y.Z)
         matches = re.findall(r"現在のバージョンは \*\*v([0-9]+\.[0-9]+\.[0-9]+)\*\*", content)
     if not matches:
         matches = re.findall(r"\| バージョン \| v([0-9]+\.[0-9]+\.[0-9]+) \|", content)

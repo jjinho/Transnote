@@ -25,10 +25,10 @@ enum UpdateURLValidator {
 }
 
 enum UpdateRepositoryValidator {
-    /// GitHub Releases API の `html_url` が、期待リポジトリのリリースタグページかを判定する。
-    /// 許容するのは `https://github.com/{owner}/{repo}/releases/tag/{tag}`。
-    /// `{tag}` に `/` が含まれる場合も、`releases/tag/` 以降をタグとして扱う。
-    /// クエリへリポジトリパスを埋め込む部分文字列一致は使わない。
+    /// Determines whether the GitHub Releases API `html_url` is a release tag page of the expected repository.
+    /// Only `https://github.com/{owner}/{repo}/releases/tag/{tag}` is allowed.
+    /// If `{tag}` contains `/`, everything after `releases/tag/` is treated as the tag.
+    /// Substring matching, which a repository path embedded in the query could fool, is not used.
     static func matchesReleaseHTMLURL(_ url: URL, expectedRepository: String) -> Bool {
         guard url.scheme?.lowercased() == "https",
               url.user == nil,
@@ -38,7 +38,7 @@ enum UpdateRepositoryValidator {
         }
 
         let components = url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
-        // タグ名に `/` が含まれると path が分割されることがある。owner/repo/releases/tag/ の後はタグとして扱う。
+        // A tag name containing `/` may split the path. Everything after owner/repo/releases/tag/ is treated as the tag.
         guard components.count >= 5,
               components[2] == "releases",
               components[3] == "tag" else {

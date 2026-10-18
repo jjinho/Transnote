@@ -1,82 +1,82 @@
-# インストール手順
+# Installation
 
-Transnote は macOS 14 以降向けのオンデバイス文字起こしアプリです。
+Transnote is an on-device transcription app for macOS 14 and later.
 
-## ⚠️ 最初に: 「マルウェア」警告について
+## ⚠️ Read this first: about the malware warning
 
-Transnote は Apple の有料開発者認証（署名）をおこなわずに配布しているため、
-インストールや初回起動のときに macOS が次のような警告を表示することがあります。
+Transnote is distributed without Apple's paid developer certification (code signing),
+so macOS may show warnings like the following during installation or on first launch.
 
-- 「“Transnote” は、**マルウェアでないことを確認できない**ため、開くことができません」
-- 「“インストール.command” は開いていません」
+- "Apple could not verify “Transnote” is **free of malware** that may harm your Mac or compromise your privacy."
+- "“インストール.command” Not Opened"
 
-**これはマルウェアやウイルスの検出ではありません。** 未署名のアプリ安全確認が
-できない、という macOS の仕組み（Gatekeeper）の通知です。Transnote はマルウェア
-ではありません。
+**This is not a malware or virus detection.** It is a notice from macOS's Gatekeeper
+mechanism saying that it cannot perform its safety check on an unsigned app. Transnote
+is not malware.
 
-※ この案内は **Transnote について**のものです。他のアプリで同様の警告が出たときは、
-そのアプリの配布元が信頼できるか必ず確認してください。
+Note: this guidance applies **to Transnote only**. If another app shows a similar warning,
+always confirm that its source is trustworthy.
 
-| 出る可能性のある警告（例） | 意味 | 対処 |
+| Possible warning (example) | Meaning | What to do |
 | --- | --- | --- |
-| 「マルウェアでないことを確認できないため、開くことができません」 | 署名がないため安全確認できない（検出ではない） | 「完了」で閉じ、[初回起動](#初回起動)の手順（右クリック→開く）へ |
-| 「“インストール.command” は開いていません」 | インストールスクリプトも署名がないため | 「ゴミ箱に入れる」は押さず「完了」で閉じ、[ターミナルから実行](#方法-a-ターミナルから実行推奨)へ |
+| "Apple could not verify … is free of malware" | Cannot be checked because it is unsigned (not a detection) | Close with "Done" and follow the [First launch](#first-launch) steps (right-click → Open) |
+| "“インストール.command” Not Opened" | The install script is also unsigned | Do not press "Move to Trash"; close with "Done" and go to [Run from Terminal](#method-a-run-from-terminal-recommended) |
 
-「ゴミ箱に入れる」は押さないでください。押すとファイルが削除されます。
-「完了」で閉じれば問題ありません。
+Do not press "Move to Trash". Doing so deletes the file.
+Closing with "Done" is fine.
 
-## ダウンロード
+## Download
 
-1. [GitHub Releases (latest)](https://github.com/T3pp31/Transnote/releases/latest) を開きます。
-2. `Transnote-<version>.dmg` または `Transnote.dmg` をダウンロードします。
-3. 同じ Release から `Transnote.dmg.sha256`（またはバージョン付き `.sha256`）も **必ず** ダウンロードし、DMG と同じフォルダに保存します。インストールスクリプトはデフォルトでこのチェックサムを検証します。
-4. 配布ページから案内される場合は [GitHub Pages](https://t3pp31.github.io/Transnote/) からも同じリンクへ遷移できます。
+1. Open [GitHub Releases (latest)](https://github.com/T3pp31/Transnote/releases/latest).
+2. Download `Transnote-<version>.dmg` or `Transnote.dmg`.
+3. From the same Release, **always** download `Transnote.dmg.sha256` (or the versioned `.sha256`) too, and save it in the same folder as the DMG. The install script verifies this checksum by default.
+4. If you were directed from the distribution page, [GitHub Pages](https://t3pp31.github.io/Transnote/) links to the same downloads.
 
-## SHA256 チェックサムの確認
+## Verifying the SHA256 checksum
 
-未署名配布のため、ダウンロードした DMG が改ざんされていないか、インストール前に確認します。**インストール.command** は、DMG と同じフォルダにある `.sha256` ファイルを自動的に検証します。
+Because the app is distributed unsigned, verify before installing that the downloaded DMG has not been tampered with. **インストール.command** ("Install.command") automatically verifies the `.sha256` file in the same folder as the DMG.
 
-### 方法 A: `.sha256` ファイルで検証
+### Method A: Verify with the `.sha256` file
 
-DMG と同じフォルダに `.sha256` ファイルを置き、ターミナルで次を実行します。
+Put the `.sha256` file in the same folder as the DMG and run the following in Terminal.
 
 ```bash
 cd ~/Downloads
 shasum -a 256 -c Transnote-0.1.0.dmg.sha256
 ```
 
-`Transnote-0.1.0.dmg: OK` と表示されれば整合性に問題ありません。
+If it prints `Transnote-0.1.0.dmg: OK`, the file is intact.
 
-### 方法 B: Release 本文のハッシュと照合
+### Method B: Compare against the hash in the Release notes
 
-Release ページに記載されている SHA256 と、ローカルで計算した値を比較します。
+Compare the SHA256 listed on the Release page with the value you compute locally.
 
 ```bash
 shasum -a 256 ~/Downloads/Transnote-0.1.0.dmg
 ```
 
-### 方法 C: CHECKSUM 環境変数で検証（上級者向け）
+### Method C: Verify with the CHECKSUM environment variable (advanced)
 
-Release 本文の SHA256 を環境変数 `CHECKSUM` に渡すと、サイドカーが無い場合でもインストール前に DMG の整合性を確認できます。
+Passing the SHA256 from the Release notes in the `CHECKSUM` environment variable lets the script verify the DMG before installing, even without a sidecar file.
 
 ```bash
-CHECKSUM="<Release に記載の SHA256>" bash "/Volumes/Transnote/インストール.command"
+CHECKSUM="<SHA256 from the Release>" bash "/Volumes/Transnote/インストール.command"
 ```
 
-## インストール（推奨）
+## Installation (recommended)
 
-未署名配布のため、**インストール.command** はダブルクリックでは実行できないことがあります。macOS の新しいバージョンでは、右クリック → **開く** でもブロックされる場合があります。**ターミナルからの実行がいちばん確実です。**
+Because the app is distributed unsigned, **インストール.command** may not run when double-clicked. On newer versions of macOS, right-click → **Open** may also be blocked. **Running it from Terminal is the most reliable method.**
 
-### 手順
+### Steps
 
-1. ダウンロードした DMG を開きます。
-2. DMG 内の **初めにお読みください.txt** を読みます。
-3. 次のいずれかで **インストール.command** を実行します。
+1. Open the downloaded DMG.
+2. Read **初めにお読みください.txt** ("Read Me First.txt") in the DMG.
+3. Run **インストール.command** using one of the following methods.
 
-#### 方法 A: ターミナルから実行（推奨）
+#### Method A: Run from Terminal (recommended)
 
-1. **ターミナル** を開きます（Spotlight で「ターミナル」と検索）。
-2. 次の2行を **1行ずつ** 貼り付けて Enter を押します。
+1. Open **Terminal** (search Spotlight for "Terminal").
+2. Paste the following two lines **one at a time**, pressing Enter after each.
 
 ```bash
 xattr -cr "/Volumes/Transnote/"
@@ -86,72 +86,72 @@ xattr -cr "/Volumes/Transnote/"
 bash "/Volumes/Transnote/インストール.command"
 ```
 
-DMG のボリューム名が `Transnote 1` などの場合は、Finder 左サイドバーの表示名に合わせてパスを変更してください。
+If the DMG volume is named something like `Transnote 1`, change the path to match the name shown in the Finder sidebar.
 
 ```bash
 xattr -cr "/Volumes/Transnote 1/"
 bash "/Volumes/Transnote 1/インストール.command"
 ```
 
-#### 方法 B: 右クリック → 開く
+#### Method B: Right-click → Open
 
-`インストール.command` を右クリック → **開く** → 確認ダイアログで **開く**。
+Right-click `インストール.command` → **Open** → **Open** in the confirmation dialog.
 
-最近の macOS では方法 B でもブロックされることがあります。その場合は方法 A を使ってください。
+Recent versions of macOS may block Method B as well. If so, use Method A.
 
-#### 方法 C: システム設定から許可
+#### Method C: Allow it in System Settings
 
-1. 警告ダイアログは **完了** で閉じます（**ゴミ箱に入れる** は押さない）。
-2. **システム設定 → プライバシーとセキュリティ** を開きます。
-3. 下の方に **インストール.command** に関する **このまま開く** があれば押します。
+1. Close the warning dialog with **Done** (do not press **Move to Trash**).
+2. Open **System Settings → Privacy & Security**.
+3. Near the bottom, if there is an **Open Anyway** button for **インストール.command**, press it.
 
-4. インストールが完了すると Transnote が起動します。
-5. DMG を Finder から **取り出します**（マウントしたままだとアプリが複数表示されます）。
+4. When installation finishes, Transnote launches.
+5. **Eject** the DMG in Finder (if it stays mounted, multiple copies of the app appear).
 
-インストールスクリプトは、Applications 内の旧バージョン（`Transnote.app` および旧名 `LocalTranscriber.app`、`Transnote 2.app` など）を削除してから新バージョンを配置します。起動中の Transnote がある場合は自動的に終了してから置き換えます。
+The install script removes older versions from Applications (`Transnote.app`, the former name `LocalTranscriber.app`, `Transnote 2.app`, and so on) before placing the new version. If Transnote is running, it is quit automatically before being replaced.
 
-## インストール（上級者向け: ドラッグ&ドロップ）
+## Installation (advanced: drag & drop)
 
-手動で配置する場合は、次の手順を守ってください。
+If you place the app manually, follow these steps.
 
-1. 実行中の Transnote を終了します。
-2. Applications フォルダ内の既存の `Transnote.app`（および `LocalTranscriber.app` があればそれも）を削除します。
-3. DMG 内の **Transnote** を **Applications** フォルダへドラッグします。
+1. Quit Transnote if it is running.
+2. Delete the existing `Transnote.app` in the Applications folder (and `LocalTranscriber.app`, if present).
+3. Drag **Transnote** from the DMG to the **Applications** folder.
 
-この方法では、アプリが起動中だったり旧版が残っていると `Transnote 2.app` などの重複ができることがあります。**通常は上記のインストールスクリプトを使うことを推奨します。**
+With this method, duplicates such as `Transnote 2.app` can be created if the app is running or an old version remains. **Using the install script above is normally recommended.**
 
-## 初回起動
+## First launch
 
-1. Applications から Transnote を起動します。
-2. 未署名ビルドのため、macOS の Gatekeeper により「開発元を確認できない」「マルウェアでないことを確認できない」などの警告が出ることがあります（**マルウェア検出ではありません**。上の「最初に」の節を参照）:
-   - **推奨**: Finder で Transnote を右クリック → **開く** を選択する（2 回目以降は通常どおり起動できます）
-   - または、システム設定 → プライバシーとセキュリティ で Transnote の起動を許可する
-3. 初回利用時は Whisper モデルのダウンロードが必要です。画面の案内に従ってください。
-4. モデル取得時のみインターネット接続が必要です。文字起こし処理自体は端末内で完結します。
+1. Launch Transnote from Applications.
+2. Because the build is unsigned, macOS Gatekeeper may show a warning such as "cannot verify the developer" or "could not verify … is free of malware" (**this is not a malware detection**; see the "Read this first" section above):
+   - **Recommended**: In Finder, right-click Transnote → choose **Open** (it launches normally from then on)
+   - Or allow Transnote to launch in System Settings → Privacy & Security
+3. The first time you use the app, you need to download a Whisper model. Follow the on-screen instructions.
+4. An internet connection is needed only to download models. Transcription itself runs entirely on the device.
 
-## 更新
+## Updating
 
-新しいバージョンがリリースされたら、最新の DMG をダウンロードし、**インストール.command** をターミナルから実行してください（上記 方法 A）。旧バージョンは自動的に置き換えられます。ユーザーデータ（`~/Library/Application Support/LocalTranscriber/`）は保持されます。
+When a new version is released, download the latest DMG and run **インストール.command** from Terminal (Method A above). The old version is replaced automatically. User data (`~/Library/Application Support/LocalTranscriber/`) is preserved.
 
-## ファイルアクセス
+## File access
 
-Transnote は App Sandbox 上で動作します。音声ファイルの読み込みや書き出しには、ファイル選択ダイアログまたはドラッグ&ドロップでユーザーが選んだファイルへのアクセス権が必要です。
+Transnote runs in the App Sandbox. Reading and writing audio files requires access to files the user has chosen through the file selection dialog or drag & drop.
 
-## アンインストール
+## Uninstalling
 
-1. Applications から Transnote をゴミ箱へ移動します。
-2. 必要に応じて `~/Library/Application Support/LocalTranscriber/` 以下のデータを削除します。
+1. Move Transnote from Applications to the Trash.
+2. If needed, delete the data under `~/Library/Application Support/LocalTranscriber/`.
 
-## トラブルシューティング
+## Troubleshooting
 
-| 症状 | 対処 |
+| Symptom | What to do |
 | --- | --- |
-| 「マルウェアでないことを確認できない」と出る | **マルウェア検出ではありません**。未署名アプリ共通の警告です。「完了」で閉じ、Finder で Transnote を右クリック → **開く** を試す（[最初に: マルウェア警告について](#-最初に-マルウェア警告について)を参照） |
-| アプリが開かない | Finder で右クリック → **開く** を試す。それでも開かない場合は DMG から再インストールする |
-| インストールスクリプトが実行できない（「開いていません」） | **ゴミ箱に入れる** は押さず **完了** で閉じる。ターミナルで `xattr -cr "/Volumes/Transnote/"` のあと `bash "/Volumes/Transnote/インストール.command"` を実行する（推奨）。右クリック → **開く** やシステム設定の **このまま開く** も試せるが、最近の macOS ではターミナルが確実 |
-| 旧バージョンが残る | **インストール.command** を使って再インストールする。手動ドラッグの場合は Applications 内の重複を削除してから再度配置する |
-| アプリが複数表示される | マウントしたままの DMG（`Transnote`、`Transnote 1` など）を Finder から取り出す。Applications 内に `Transnote 2.app` などがあれば削除し、**インストール.command** で再インストールする |
-| モデルが取得できない | ネットワーク接続とファイアウォール設定を確認する |
-| 文字起こしが遅い | より小さいモデルを選ぶ、または長時間音声を分割する |
+| "could not verify … is free of malware" appears | **This is not a malware detection.** It is a warning shown for all unsigned apps. Close with "Done" and try right-clicking Transnote in Finder → **Open** (see [Read this first: about the malware warning](#-read-this-first-about-the-malware-warning)) |
+| The app does not open | Try right-click → **Open** in Finder. If it still does not open, reinstall from the DMG |
+| The install script will not run ("Not Opened") | Do not press **Move to Trash**; close with **Done**. In Terminal, run `xattr -cr "/Volumes/Transnote/"` followed by `bash "/Volumes/Transnote/インストール.command"` (recommended). Right-click → **Open** or **Open Anyway** in System Settings may also work, but Terminal is reliable on recent macOS |
+| An old version remains | Reinstall using **インストール.command**. If you dragged the app manually, delete duplicates in Applications and place it again |
+| Multiple copies of the app appear | Eject any still-mounted DMGs (`Transnote`, `Transnote 1`, etc.) in Finder. If Applications contains `Transnote 2.app` or similar, delete it and reinstall with **インストール.command** |
+| Models cannot be downloaded | Check your network connection and firewall settings |
+| Transcription is slow | Choose a smaller model, or split long audio |
 
-問題が続く場合は [GitHub Issues](https://github.com/T3pp31/Transnote/issues) に報告してください。
+If problems persist, report them on [GitHub Issues](https://github.com/T3pp31/Transnote/issues).

@@ -35,7 +35,7 @@ struct UpdateCheckService: UpdateChecking {
         self.defaults = defaults
     }
 
-    /// 確認間隔（秒）。6時間以内は API を呼ばない。
+    /// Check interval in seconds. The API is not called again within 6 hours.
     private static let minimumCheckInterval: TimeInterval = 6 * 60 * 60
 
     func checkForUpdate() async -> UpdateOffer? {
@@ -43,7 +43,7 @@ struct UpdateCheckService: UpdateChecking {
             return nil
         }
 
-        // 前回確認から間隔内ならスキップ（起動ごとの API 呼び出しを防ぐ）
+        // Skip if within the interval since the last check (prevents an API call on every launch)
         if let lastCheck = defaults.object(forKey: "lastUpdateCheckDate") as? Date,
            Date().timeIntervalSince(lastCheck) < checkInterval {
             return nil
@@ -78,7 +78,7 @@ struct UpdateCheckService: UpdateChecking {
             )
         } catch let error as UpdateCheckError {
             if case .notModified = error {
-                // 304 Not Modified: 変更なし。エラーログは不要。
+                // 304 Not Modified: no changes. No error log needed.
                 return nil
             }
             AppLogger.error("Update check failed: \(error)", logger: AppLogger.general)
@@ -96,13 +96,13 @@ struct UpdateCheckService: UpdateChecking {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("Transnote", forHTTPHeaderField: "User-Agent")
 
-        // 前回取得時の ETag があれば If-None-Match で送信し、304 なら更新なしとする
+        // If there is an ETag from the previous fetch, send it as If-None-Match; a 304 means no update
         if let etag = defaults.string(forKey: "updateETag") {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
 
         let (data, response) = try await session.data(for: request)
-        // レスポンスサイズ上限（8 MB）
+        // Response size limit (8 MB)
         guard data.count <= Self.maxResponseSize else {
             throw UpdateCheckError.responseTooLarge
         }
@@ -123,7 +123,7 @@ struct UpdateCheckService: UpdateChecking {
         return release
     }
 
-    /// `repository.full_name` がある場合は期待値と一致すること。欠落・一致いずれでも `html_url` は必ず検証する。
+    /// If `repository.full_name` is present, it must match the expected value. `html_url` is always validated, whether the field is missing or matches.
     private func isValidRepository(_ release: GitHubRelease) -> Bool {
         if let fullName = release.repository?.fullName,
            fullName != config.expectedGitHubRepository {

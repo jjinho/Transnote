@@ -18,8 +18,8 @@ enum AppError: LocalizedError, Equatable {
         ErrorMapper.userMessage(for: self)
     }
 
-    // Error は Equatable に適合しないため、手動で同値比較を実装する。
-    // 元エラー保持ケース（*WithReason）は NSError にブリッジして同値比較する。
+    // Error does not conform to Equatable, so equality is implemented manually.
+    // Cases that retain the underlying error (*WithReason) are compared by bridging to NSError.
     static func == (lhs: AppError, rhs: AppError) -> Bool {
         switch (lhs, rhs) {
         case (.unsupportedFileExtension(let l), .unsupportedFileExtension(let r)):
@@ -109,7 +109,7 @@ enum ErrorMapper {
             return NSLocalizedString("処理がキャンセルされました。", comment: "Operation cancelled")
         }
 
-        // URLError は型ベースで分類する（部分文字列一致による誤分類を防ぐ）
+        // Classify URLError by type (prevents misclassification from substring matching)
         if let urlError = error as? URLError {
             if urlError.code == .cancelled {
                 return NSLocalizedString("処理がキャンセルされました。", comment: "Operation cancelled")
@@ -137,9 +137,9 @@ enum ErrorMapper {
             )
         }
 
-        // WhisperKit 由来のエラーは型不明のことが多いため、
-        // 部分文字列一致による誤分類を避けるべく、
-        // より具体的・長いフレーズに限定して判定する
+        // Errors from WhisperKit are often of unknown type, so
+        // to avoid misclassification from substring matching,
+        // only more specific, longer phrases are matched
         let lowercasedDescription = description.lowercased()
         if lowercasedDescription.contains("network connection")
             || lowercasedDescription.contains("network error") {

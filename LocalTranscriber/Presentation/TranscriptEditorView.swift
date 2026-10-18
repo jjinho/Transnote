@@ -319,6 +319,13 @@ private struct SegmentPlaybackRow: View {
                     .textFieldStyle(.plain)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .multilineTextAlignment(.leading)
+
+                if let lowConfidenceSummary {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .help(lowConfidenceSummary)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -345,7 +352,10 @@ private struct SegmentPlaybackRow: View {
                 }
             }
         }
-        .accessibilityLabel("\(segment.accessibilityStartTimestamp)、\(segment.text)")
+        .accessibilityLabel(
+            lowConfidenceSummary.map { Text("\(segment.accessibilityStartTimestamp)、\(segment.text)、\($0)") }
+                ?? Text("\(segment.accessibilityStartTimestamp)、\(segment.text)")
+        )
         .accessibilityValue(isPlaying ? "再生中" : "停止中")
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("スワイプアップまたはダウンで再生・停止できます")
@@ -359,6 +369,19 @@ private struct SegmentPlaybackRow: View {
                 break
             }
         }
+    }
+
+    /// Lists the words the model was unsure about with their scores, e.g. "Low-confidence words: Hollis 42%, crate 48%".
+    private var lowConfidenceSummary: String? {
+        let words = segment.lowConfidenceWords
+        guard !words.isEmpty else { return nil }
+        let list = words
+            .map { "\($0.text) \($0.probability.formatted(.percent.precision(.fractionLength(0))))" }
+            .joined(separator: ", ")
+        return String(
+            format: NSLocalizedString("信頼度の低い単語: %@", comment: "Tooltip listing low-confidence words with their scores"),
+            list
+        )
     }
 
     private var backgroundColor: Color {

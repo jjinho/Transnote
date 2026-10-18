@@ -19,16 +19,16 @@ final class ModelAvailabilityServiceTests: XCTestCase {
     }
 
     func testIsDownloadedReturnsFalseWhenDirectoryMissing() {
-        // Given: 空の一時ディレクトリ
-        // When: モデル存在を確認
+        // Given: an empty temporary directory
+        // When: checking whether the model exists
         let result = service.isDownloaded(whisperKitModelName: "base")
 
-        // Then: 未ダウンロード
+        // Then: not downloaded
         XCTAssertFalse(result)
     }
 
     func testIsDownloadedReturnsFalseWhenVariantPathMissing() {
-        // Given: 必須ファイルのない variant フォルダ
+        // Given: a variant folder without the required files
         let variantFolder = temporaryRoot.appendingPathComponent("models/openai_whisper-base", isDirectory: true)
         try? FileManager.default.createDirectory(at: variantFolder, withIntermediateDirectories: true)
 
@@ -40,7 +40,7 @@ final class ModelAvailabilityServiceTests: XCTestCase {
     }
 
     func testIsDownloadedReturnsTrueWhenRequiredModelsExist() throws {
-        // Given: 必須 CoreML ファイルを含む variant フォルダ
+        // Given: a variant folder containing the required CoreML files
         let variantFolder = temporaryRoot.appendingPathComponent("models/openai_whisper-base", isDirectory: true)
         try FileManager.default.createDirectory(at: variantFolder, withIntermediateDirectories: true)
         for name in ["MelSpectrogram", "AudioEncoder", "TextDecoder"] {
@@ -57,7 +57,7 @@ final class ModelAvailabilityServiceTests: XCTestCase {
     }
 
     func testIsDownloadedReturnsFalseWhenRequiredModelFileIsZeroBytes() throws {
-        // Given: 必須ファイルが0バイト（ダウンロード途中失敗）の variant フォルダ
+        // Given: a variant folder whose required files are 0 bytes (failed mid-download)
         let variantFolder = temporaryRoot.appendingPathComponent("models/openai_whisper-base", isDirectory: true)
         try FileManager.default.createDirectory(at: variantFolder, withIntermediateDirectories: true)
         for name in ["MelSpectrogram", "AudioEncoder", "TextDecoder"] {
@@ -68,13 +68,13 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let result = service.isDownloaded(whisperKitModelName: "base")
 
-        // Then: 0バイトは不完全扱いのため未ダウンロード
+        // Then: 0 bytes is treated as incomplete, so not downloaded
         XCTAssertFalse(result)
         XCTAssertNil(service.modelFolder(for: "base"))
     }
 
     func testModelFolderIgnoresParentWhenModelsAreOnlyInChildDirectory() throws {
-        // Given: 親フォルダにはモデルがなく、子フォルダのみに配置
+        // Given: no model in the parent folder; placed only in a child folder
         let parentFolder = temporaryRoot.appendingPathComponent("models/argmaxinc/whisperkit-coreml", isDirectory: true)
         let childFolder = parentFolder.appendingPathComponent("openai_whisper-base", isDirectory: true)
         try FileManager.default.createDirectory(at: childFolder, withIntermediateDirectories: true)
@@ -86,12 +86,12 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let folder = service.modelFolder(for: "base")
 
-        // Then: 親ではなく variant フォルダを返す
+        // Then: returns the variant folder, not the parent
         XCTAssertEqual(folder?.lastPathComponent, "openai_whisper-base")
     }
 
     func testShortVariantNameDoesNotMatchUnrelatedDirectory() throws {
-        // Given: "base" を含む無関係ディレクトリに必須モデルファイルを配置
+        // Given: required model files placed in an unrelated directory containing "base"
         let decoyFolder = temporaryRoot.appendingPathComponent("models/database", isDirectory: true)
         try FileManager.default.createDirectory(at: decoyFolder, withIntermediateDirectories: true)
         for name in ["MelSpectrogram", "AudioEncoder", "TextDecoder"] {
@@ -102,13 +102,13 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let result = service.isDownloaded(whisperKitModelName: "base")
 
-        // Then: "database" は "base" を含むがハイフン区切りではないためマッチしない
+        // Then: "database" contains "base" but is not hyphen-delimited, so it does not match
         XCTAssertFalse(result)
         XCTAssertNil(service.modelFolder(for: "base"))
     }
 
     func testShortVariantNameDoesNotMatchSuffixWithoutHyphen() throws {
-        // Given: "tiny" で終わるがハイフン区切りではない無関係ディレクトリ
+        // Given: an unrelated directory ending in "tiny" but not hyphen-delimited
         let decoyFolder = temporaryRoot.appendingPathComponent("models/itiny", isDirectory: true)
         try FileManager.default.createDirectory(at: decoyFolder, withIntermediateDirectories: true)
         for name in ["MelSpectrogram", "AudioEncoder", "TextDecoder"] {
@@ -119,15 +119,15 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let result = service.isDownloaded(whisperKitModelName: "tiny")
 
-        // Then: "itiny" は "tiny" で終わるがハイフン区切りではないためマッチしない
+        // Then: "itiny" ends in "tiny" but is not hyphen-delimited, so it does not match
         XCTAssertFalse(result)
         XCTAssertNil(service.modelFolder(for: "tiny"))
     }
 
-    // MARK: - 同スコア時の決定的な選択
+    // MARK: - Deterministic selection on tied scores
 
-    /// /var は /private/var へのシンボリックリンクのため、enumerator の返す URL と
-    /// temporaryDirectory から生成した URL で実パス表現が異なる。両者を正規化して比較する。
+    /// /var is a symbolic link to /private/var, so URLs returned by the enumerator and
+    /// URLs built from temporaryDirectory differ in their real path representation. Both are normalized before comparing.
     private func standardize(_ url: URL?) -> URL? {
         url?.resolvingSymlinksInPath().standardizedFileURL
     }
@@ -137,7 +137,7 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         for coreMLName in ["MelSpectrogram", "AudioEncoder", "TextDecoder"] {
             let fileURL = folder.appendingPathComponent("\(coreMLName).mlmodelc")
-            // 0バイトは #138 の「不完全ダウンロード」判定で除外されるため、非ゼロデータで作成する
+            // 0-byte files are excluded by the "incomplete download" check from #138, so create them with non-zero data
             FileManager.default.createFile(atPath: fileURL.path, contents: Data("model".utf8))
         }
         if let modificationDate {
@@ -150,20 +150,20 @@ final class ModelAvailabilityServiceTests: XCTestCase {
     }
 
     func testModelFolderPrefersNewerModificationDateOnEqualScores() throws {
-        // Given: 同スコア（接尾辞一致 80）の2つの候補フォルダを用意
+        // Given: two candidate folders with tied scores (suffix match, 80)
         let older = try makeVariantFolder("alpha-base", modificationDate: Date(timeIntervalSince1970: 1_000_000))
         let newer = try makeVariantFolder("beta-base", modificationDate: Date(timeIntervalSince1970: 2_000_000))
 
         // When
         let folder = service.modelFolder(for: "base")
 
-        // Then: 更新日時が新しい方が選択される
+        // Then: the more recently modified one is selected
         XCTAssertEqual(standardize(folder), standardize(newer))
         XCTAssertNotEqual(standardize(folder), standardize(older))
     }
 
     func testModelFolderPrefersLexicographicallyOrderedNameOnEqualModificationDate() throws {
-        // Given: 同スコアかつ同一更新日時の2つの候補フォルダを用意
+        // Given: two candidate folders with tied scores and identical modification dates
         let sameDate = Date(timeIntervalSince1970: 1_500_000)
         let alpha = try makeVariantFolder("alpha-base", modificationDate: sameDate)
         let beta = try makeVariantFolder("beta-base", modificationDate: sameDate)
@@ -171,39 +171,39 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let folder = service.modelFolder(for: "base")
 
-        // Then: 列挙順ではなく名前の昇順で決定的に選択される
+        // Then: selected deterministically by name ascending, not enumeration order
         XCTAssertEqual(standardize(folder), standardize(alpha))
         XCTAssertNotEqual(standardize(folder), standardize(beta))
     }
 
     func testModelFolderPrefersHigherScoreFolder() throws {
-        // Given: 高スコア（完全一致 100）と低スコア（接尾辞一致 80）の候補を用意
+        // Given: candidates with a high score (exact match, 100) and a low score (suffix match, 80)
         let exactMatch = try makeVariantFolder("base", modificationDate: Date(timeIntervalSince1970: 1_000_000))
         let suffixMatch = try makeVariantFolder("custom-base", modificationDate: Date(timeIntervalSince1970: 2_000_000))
 
         // When
         let folder = service.modelFolder(for: "base")
 
-        // Then: 更新日時に関わらず高スコアのフォルダが選択される
+        // Then: the high-scoring folder is selected regardless of modification date
         XCTAssertEqual(standardize(folder), standardize(exactMatch))
         XCTAssertNotEqual(standardize(folder), standardize(suffixMatch))
     }
 
     func testExactVariantMatchBeatsOpenAIWhisperPrefixMatch() throws {
-        // Given: 完全一致（100）と openai_whisper- 一致（90）の候補を用意
+        // Given: candidates with an exact match (100) and an openai_whisper- match (90)
         let exactMatch = try makeVariantFolder("base", modificationDate: Date(timeIntervalSince1970: 1_000_000))
         let prefixMatch = try makeVariantFolder("openai_whisper-base", modificationDate: Date(timeIntervalSince1970: 2_000_000))
 
         // When
         let folder = service.modelFolder(for: "base")
 
-        // Then: 更新日時に関わらず完全一致（スコア 100）が優先される
+        // Then: the exact match (score 100) wins regardless of modification date
         XCTAssertEqual(standardize(folder), standardize(exactMatch))
         XCTAssertNotEqual(standardize(folder), standardize(prefixMatch))
     }
 
     func testModelFolderIgnoresHiddenCacheDirectory() throws {
-        // Given: 実際のモデルフォルダ（古い）と HuggingFace ステージングの隠しフォルダ（新しい）を用意
+        // Given: a real model folder (older) and a hidden HuggingFace staging folder (newer)
         let realFolder = try makeVariantFolder(
             "openai_whisper-base",
             modificationDate: Date(timeIntervalSince1970: 1_000_000)
@@ -216,7 +216,7 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let folder = service.modelFolder(for: "base")
 
-        // Then: 更新日時が新しい隠しフォルダではなく実フォルダが選択される
+        // Then: the real folder is selected, not the more recently modified hidden folder
         XCTAssertEqual(standardize(folder), standardize(realFolder))
         XCTAssertNotEqual(standardize(folder), standardize(cacheFolder))
     }
@@ -238,7 +238,7 @@ final class ModelAvailabilityServiceTests: XCTestCase {
     }
 
     func testModelFolderBreaksIdenticalNameTiesUsingFullPath() throws {
-        // Given: 同一葉名・同一更新日時で親だけが異なる 2 つの候補
+        // Given: two candidates with the same leaf name and modification date, differing only in parent
         let sameDate = Date(timeIntervalSince1970: 1_500_000)
         let repoA = try makeVariantFolder("repo-a/openai_whisper-base", modificationDate: sameDate)
         let repoB = try makeVariantFolder("repo-b/openai_whisper-base", modificationDate: sameDate)
@@ -246,7 +246,7 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let folder = service.modelFolder(for: "base")
 
-        // Then: 列挙順ではなく正規化パスの昇順で決定的に選択される
+        // Then: selected deterministically by normalized path ascending, not enumeration order
         let expectedPath: String? = [repoA, repoB]
             .compactMap { standardize($0)?.path }
             .min()
@@ -254,7 +254,7 @@ final class ModelAvailabilityServiceTests: XCTestCase {
     }
 
     func testIsDownloadedReturnsFalseWhenRequiredModelBundleDirectoryIsEmpty() throws {
-        // Given: .mlmodelc が空ディレクトリ（ダウンロード途中のバンドル）
+        // Given: a .mlmodelc that is an empty directory (a bundle mid-download)
         let variantFolder = temporaryRoot.appendingPathComponent("models/openai_whisper-base", isDirectory: true)
         try FileManager.default.createDirectory(at: variantFolder, withIntermediateDirectories: true)
         for name in ["MelSpectrogram", "AudioEncoder", "TextDecoder"] {
@@ -265,13 +265,13 @@ final class ModelAvailabilityServiceTests: XCTestCase {
         // When
         let result = service.isDownloaded(whisperKitModelName: "base")
 
-        // Then: 空バンドルは不完全扱い
+        // Then: an empty bundle is treated as incomplete
         XCTAssertFalse(result)
         XCTAssertNil(service.modelFolder(for: "base"))
     }
 
     func testIsDownloadedReturnsTrueWhenRequiredModelBundleDirectoryHasContents() throws {
-        // Given: .mlmodelc が中身のあるディレクトリ（実際の CoreML バンドル）
+        // Given: a .mlmodelc directory with content (a real CoreML bundle)
         let variantFolder = temporaryRoot.appendingPathComponent("models/openai_whisper-base", isDirectory: true)
         try FileManager.default.createDirectory(at: variantFolder, withIntermediateDirectories: true)
         for name in ["MelSpectrogram", "AudioEncoder", "TextDecoder"] {

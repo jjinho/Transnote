@@ -1,6 +1,6 @@
 import Foundation
 
-/// 文字起こし履歴を Application Support/History に JSON で保存・読み込みする。
+/// Saves and loads transcription history as JSON in Application Support/History.
 struct HistoryStore: Sendable {
     private let historyRoot: URL
     private let fileManager: FileManager
@@ -49,7 +49,7 @@ struct HistoryStore: Sendable {
             .map { $0 }
     }
 
-    /// 全文・ファイル名を対象に履歴を検索する。
+    /// Searches history by full text and file name.
     func search(query: String, limit: Int = 50) -> [Transcript] {
         let normalized = query.lowercased()
         guard !normalized.isEmpty else { return recent(limit: limit) }
@@ -69,7 +69,7 @@ struct HistoryStore: Sendable {
 
     // MARK: - Crash recovery (temporary transcripts)
 
-    /// クラッシュ復旧用に一時的な Transcript を保存する。
+    /// Temporarily saves a Transcript for crash recovery.
     func saveTemporary(_ transcript: Transcript) throws {
         try fileManager.createDirectory(at: AppDirectories.tempTranscriptsDirectory, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
@@ -79,7 +79,7 @@ struct HistoryStore: Sendable {
         try data.write(to: url, options: .atomic)
     }
 
-    /// クラッシュ復旧用の一時 Transcript を読み込む。なければ nil。
+    /// Loads the temporary crash-recovery Transcript. nil if none.
     func loadTemporary() -> Transcript? {
         let url = AppDirectories.tempTranscriptsDirectory.appendingPathComponent("recovery.json")
         guard let data = try? Data(contentsOf: url) else { return nil }
@@ -88,7 +88,7 @@ struct HistoryStore: Sendable {
         return try? decoder.decode(Transcript.self, from: data)
     }
 
-    /// クラッシュ復旧用の一時 Transcript を削除する。
+    /// Deletes the temporary crash-recovery Transcript.
     func clearTemporary() {
         let url = AppDirectories.tempTranscriptsDirectory.appendingPathComponent("recovery.json")
         try? fileManager.removeItem(at: url)

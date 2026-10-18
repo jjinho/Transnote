@@ -89,16 +89,28 @@ struct FileDropView: View {
 
     private var dropZoneAccessibilityLabel: String {
         if let selectedFile {
-            return "選択中の音声ファイル、\(selectedFile.fileName)"
+            return String(
+                format: NSLocalizedString("選択中の音声ファイル、%@", comment: "Drop zone accessibility label with selected file"),
+                selectedFile.fileName
+            )
         }
-        return "音声ファイルのドロップゾーン"
+        return NSLocalizedString("音声ファイルのドロップゾーン", comment: "Drop zone accessibility label")
     }
 
     private var dropZoneAccessibilityHint: String {
         if selectedFile != nil {
-            return "別の音声ファイルをドロップまたはファイルを開くで差し替えできます"
+            return NSLocalizedString(
+                "別の音声ファイルをドロップまたはファイルを開くで差し替えできます",
+                comment: "Drop zone accessibility hint when a file is selected"
+            )
         }
-        return "対応形式は \(supportedFormatsDescription) です。音声ファイルをドロップするか、ファイルを開いてください"
+        return String(
+            format: NSLocalizedString(
+                "対応形式は %@ です。音声ファイルをドロップするか、ファイルを開いてください",
+                comment: "Drop zone accessibility hint"
+            ),
+            supportedFormatsDescription
+        )
     }
 
     private var dropZoneSurface: some View {
@@ -169,8 +181,8 @@ struct FileDropView: View {
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
         dropErrorMessage = nil
 
-        // 複数ファイルのドロップは正式対応しない（現状は1ファイルのみ）。
-        // 明示的に拒否して、ユーザーが期待する挙動を明確にする。
+        // Dropping multiple files is not officially supported (currently only one file).
+        // Reject it explicitly to make the expected behavior clear to the user.
         if providers.count > 1 {
             dropErrorMessage = NSLocalizedString(
                 "複数ファイルのドロップには対応していません。1つの音声ファイルをドロップしてください。",
@@ -202,7 +214,10 @@ struct FileDropView: View {
         guard index < typeIdentifiers.count else {
             AppLogger.error("Drop import failed: unsupported dropped item", logger: AppLogger.fileAccess)
             DispatchQueue.main.async {
-                self.dropErrorMessage = "対応している音声ファイルを読み込めませんでした。"
+                self.dropErrorMessage = NSLocalizedString(
+                    "対応している音声ファイルを読み込めませんでした。",
+                    comment: "Dropped item could not be loaded"
+                )
             }
             return
         }

@@ -14,7 +14,7 @@ enum AppVersion {
         let left = parsed(normalize(lhs))
         let right = parsed(normalize(rhs))
 
-        // 1. MAJOR / MINOR / PATCH を数値比較する（Int 幅に依存しない）
+        // 1. Compare MAJOR / MINOR / PATCH numerically (independent of Int width)
         for index in 0..<max(left.core.count, right.core.count) {
             let leftNumber = index < left.core.count ? left.core[index] : "0"
             let rightNumber = index < right.core.count ? right.core[index] : "0"
@@ -24,13 +24,13 @@ enum AppVersion {
             }
         }
 
-        // 2. 数値部分が同一の場合、プレリリースを SemVer 規約どおり比較する
-        // ビルドメタデータは parsed() で除外済みのため比較に影響しない
+        // 2. If the numeric parts are equal, compare prereleases per the SemVer spec
+        // Build metadata is already excluded in parsed(), so it does not affect the comparison
         switch (left.prerelease, right.prerelease) {
         case (nil, nil):
             return .orderedSame
         case (nil, _):
-            // プレリリースなしの方がプレリリースありよりも新しい
+            // A version without a prerelease is newer than one with a prerelease
             return .orderedDescending
         case (_, nil):
             return .orderedAscending
@@ -48,9 +48,9 @@ enum AppVersion {
         let prerelease: [String]?
     }
 
-    /// `MAJOR.MINOR.PATCH[-prerelease][+build]` をパースする。
-    /// - ビルドメタデータ（`+` 以降）は比較対象から除外する
-    /// - プレリリース（最初の `-` 以降）をドット区切りの識別子リストとして保持する
+    /// Parses `MAJOR.MINOR.PATCH[-prerelease][+build]`.
+    /// - Build metadata (after `+`) is excluded from comparison
+    /// - The prerelease (after the first `-`) is kept as a list of dot-separated identifiers
     private static func parsed(_ version: String) -> ParsedVersion {
         guard !version.isEmpty else {
             return ParsedVersion(core: [], prerelease: nil)
@@ -68,8 +68,8 @@ enum AppVersion {
         return ParsedVersion(core: core, prerelease: prerelease)
     }
 
-    /// プレリリース識別子リストを SemVer 規約どおり比較する。
-    /// - 同一プレフィックスの場合、短いリストの方が小さい
+    /// Compares prerelease identifier lists per the SemVer spec.
+    /// - If one list is a prefix of the other, the shorter list is smaller
     private static func comparePrerelease(_ leftIdentifiers: [String], _ rightIdentifiers: [String]) -> ComparisonResult {
         let count = max(leftIdentifiers.count, rightIdentifiers.count)
         for index in 0..<count {
@@ -88,10 +88,10 @@ enum AppVersion {
         return .orderedSame
     }
 
-    /// プレリリース識別子 1 つを比較する。
-    /// - 数値のみの識別子は数値比較（ASCII 数字のみ。符号付きは非数値）
-    /// - 数値識別子は非数値識別子より小さい
-    /// - 両方非数値の場合は ASCII 辞書順
+    /// Compares a single prerelease identifier.
+    /// - Numeric-only identifiers are compared numerically (ASCII digits only; signed values are non-numeric)
+    /// - Numeric identifiers are smaller than non-numeric identifiers
+    /// - If both are non-numeric, compare in ASCII lexical order
     private static func compareIdentifier(_ left: String, _ right: String) -> ComparisonResult {
         switch (isNumericIdentifier(left), isNumericIdentifier(right)) {
         case (true, true):
@@ -105,13 +105,13 @@ enum AppVersion {
         }
     }
 
-    /// SemVer の numeric identifier: 空でなく ASCII 数字のみ。符号や非 ASCII 数字は非数値。
+    /// SemVer numeric identifier: non-empty and ASCII digits only. Signs and non-ASCII digits are non-numeric.
     private static func isNumericIdentifier(_ value: String) -> Bool {
         !value.isEmpty && value.unicodeScalars.allSatisfy { $0 >= "0" && $0 <= "9" }
     }
 
-    /// 桁あふれしない数値比較。先頭ゼロを除いた桁数 → 辞書順。
-    /// 非数値コア成分は `0` として扱う（既存のフォールバック互換）。
+    /// Overflow-safe numeric comparison: digit count after stripping leading zeros, then lexical order.
+    /// Non-numeric core components are treated as `0` (compatible with the existing fallback).
     private static func compareNumericIdentifier(_ lhs: String, _ rhs: String) -> ComparisonResult {
         let left = normalizedNumeric(lhs)
         let right = normalizedNumeric(rhs)
@@ -135,11 +135,17 @@ enum AppDiagnostics {
         let osText = "\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"
         let models = AppConfig.shared.models.map { model in "- \(model.id): \(model.whisperKitModelName)" }
         var lines = [
-            "アプリバージョン: \(appVersion)",
+            String(format: NSLocalizedString("アプリバージョン: %@", comment: "Diagnostics app version"), appVersion),
             "macOS: \(osText)",
-            "CPUコア数: \(ProcessInfo.processInfo.processorCount)",
-            "メモリ: \(ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)) GB",
-            "モデル:",
+            String(
+                format: NSLocalizedString("CPUコア数: %@", comment: "Diagnostics CPU core count"),
+                String(ProcessInfo.processInfo.processorCount)
+            ),
+            String(
+                format: NSLocalizedString("メモリ: %@ GB", comment: "Diagnostics physical memory"),
+                String(ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024))
+            ),
+            NSLocalizedString("モデル:", comment: "Diagnostics models header"),
         ]
         return (lines + models).joined(separator: " | ")
     }

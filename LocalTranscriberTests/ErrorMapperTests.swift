@@ -6,7 +6,7 @@ final class ErrorMapperTests: XCTestCase {
         var errorDescription: String? { "Internal secret error details" }
     }
 
-    // "network" という文字列を含むが、実際はネットワークエラーではないエラー
+    // An error that contains the string "network" but is not actually a network error
     private struct NetworkKeywordButNotNetworkError: Error, LocalizedError {
         var errorDescription: String? { "Out-of-memory: network buffers exhausted" }
     }
@@ -37,7 +37,7 @@ final class ErrorMapperTests: XCTestCase {
 
         let expected = ErrorMapper.userMessage(for: reason)
         XCTAssertEqual(error.errorDescription, expected)
-        // ネットワークエラーに分類されること（ロケール非依存の検証）
+        // Classified as a network error (locale-independent check)
         XCTAssertNotEqual(
             error.errorDescription,
             ErrorMapper.userMessage(for: UnknownTestError())
@@ -52,8 +52,8 @@ final class ErrorMapperTests: XCTestCase {
         )
         let error = AppError.exportFailedWithReason(reason)
 
-        // exportFailedWithReason は「エクスポートに失敗しました: 」を前置して
-        // userMessage を埋め込む
+        // exportFailedWithReason prefixes "エクスポートに失敗しました: " ("Export failed: ")
+        // to the embedded userMessage
         XCTAssertEqual(
             error.errorDescription,
             String(
@@ -77,14 +77,14 @@ final class ErrorMapperTests: XCTestCase {
     func testURLErrorNotConnectedToInternetClassifiedAsNetwork() {
         let message = ErrorMapper.userMessage(for: URLError(.notConnectedToInternet))
 
-        // ネットワークエラーに分類されること（ロケール非依存の検証）
+        // Classified as a network error (locale-independent check)
         XCTAssertNotEqual(message, ErrorMapper.userMessage(for: UnknownTestError()))
     }
 
     func testURLErrorNetworkConnectionLostClassifiedAsNetwork() {
         let message = ErrorMapper.userMessage(for: URLError(.networkConnectionLost))
 
-        // 個別のメッセージを参照せず、ネットワーク分類の文言が返ることのみ検証する
+        // Verify only that the network-category message is returned, without referencing individual messages
         XCTAssertNotEqual(message, ErrorMapper.userMessage(for: UnknownTestError()))
     }
 

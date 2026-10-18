@@ -143,14 +143,14 @@ final class AudioImportServiceTests: XCTestCase {
     func testRemoveFileIfExistsIfFailedIsNoOpForMissingFile() {
         let missingURL = importsRoot.appendingPathComponent("missing.m4a")
 
-        // 存在しないパスでも throw せず何もしない
+        // Does nothing without throwing, even for a nonexistent path
         service.removeFileIfExistsIfFailed(missingURL)
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: missingURL.path))
     }
 
     func testImportFileRemovesPartialFileWhenCopyItemFailsAndStreamingIsSkipped() throws {
-        // copyItem が「部分コピーを作成した後」に失敗する状況を模倣する
+        // Simulate copyItem failing "after creating a partial copy"
         let failingManager = PartialCopyThenFailFileManager()
         let serviceWithFailingManager = AudioImportService(
             importsRoot: importsRoot,
@@ -164,7 +164,7 @@ final class AudioImportServiceTests: XCTestCase {
 
         let sourceURL = sourceRoot.appendingPathComponent("unreadable.wav")
         FileManager.default.createFile(atPath: sourceURL.path, contents: Data("audio".utf8))
-        // 読み取り不可にすることで、copyFileStreaming へのフォールバックも失敗させる
+        // Make it unreadable so the fallback to copyFileStreaming also fails
         try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: sourceURL.path)
 
         let destinationURL = importsRoot.appendingPathComponent("unreadable.wav")
@@ -183,7 +183,7 @@ final class AudioImportServiceTests: XCTestCase {
     }
 
     func testImportFileFallsBackToStreamingWhenCopyItemFails() throws {
-        // copyItem が失敗しても copyFileStreaming で正常にコピーできることを検証する
+        // Verify that even if copyItem fails, copyFileStreaming copies successfully
         let failingManager = PartialCopyThenFailFileManager()
         let serviceWithFailingManager = AudioImportService(
             importsRoot: importsRoot,
@@ -226,16 +226,16 @@ final class AudioImportServiceTests: XCTestCase {
     }
 
     func testCleanupExpiredImportsIsNoOpWhenImportsRootMissing() throws {
-        // importsRoot が存在しない場合でも throw しない
+        // Does not throw even if importsRoot does not exist
         XCTAssertNoThrow(try service.cleanupExpiredImports())
     }
 }
 
-/// copyItem が常に失敗し、その際に destination へ部分的なファイルを残す FileManager。
-/// 実際の copyItem が途中失敗する状況を再現するためのテスト用サブクラス。
+/// A FileManager whose copyItem always fails, leaving a partial file at destination when it does.
+/// Test subclass that reproduces a real copyItem failing partway through.
 private final class PartialCopyThenFailFileManager: FileManager {
     override func copyItem(at srcURL: URL, to dstURL: URL) throws {
-        // 部分コピーを模倣: destination に 0 バイトの partial ファイルを作成してから失敗する
+        // Simulate a partial copy: create a 0-byte partial file at destination, then fail
         try? createDirectory(at: dstURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         createFile(atPath: dstURL.path, contents: nil)
         throw NSError(

@@ -167,7 +167,7 @@ final class MainWindowViewModel: ObservableObject {
         refreshModelAvailability()
     }
 
-    /// AppDependencies 経由で依存をまとめて注入するイニシャライザ。
+    /// Initializer that injects all dependencies at once via AppDependencies.
     init(dependencies: AppDependencies) {
         self.transcriber = dependencies.transcriber
         self.audioFileService = dependencies.audioFileService
@@ -185,13 +185,13 @@ final class MainWindowViewModel: ObservableObject {
 
     private let operationCoordinator = OperationCoordinator()
 
-    /// モデルダウンロード中かどうか。uiState + progressDisplay から導出する単一の状態。
+    /// Whether a model download is in progress. A single state derived from uiState + progressDisplay.
     var isDownloadingModel: Bool {
         uiState == .preparing && progressDisplay.phase == .downloadingModel
     }
 
-    /// テスト専用: モデルダウンロード中の状態をシミュレートする。
-    /// 本番コードでは使用しない（状態機械の整合性を保つため）。
+    /// Test only: simulates the model-downloading state.
+    /// Not used in production code (to keep the state machine consistent).
     func simulateModelDownloadForTesting() {
         uiState = .preparing
         progressDisplay = TranscriptionProgressDisplay.from(update: .make(phase: .downloadingModel, fraction: 0))
@@ -296,17 +296,17 @@ final class MainWindowViewModel: ObservableObject {
         }
     }
 
-    /// クラッシュ復旧用の一時 Transcript を取得する。
+    /// Fetches the temporary Transcript used for crash recovery.
     func temporaryTranscriptForRecovery() -> Transcript? {
         historyStore.loadTemporary()
     }
 
-    /// 復旧用一時 Transcript を削除する。
+    /// Deletes the temporary recovery Transcript.
     func clearTemporaryTranscript() {
         historyStore.clearTemporary()
     }
 
-    /// クラッシュ復旧用の一時 Transcript を現在の状態へ復元する。
+    /// Restores the temporary crash-recovery Transcript into the current state.
     func restoreTranscript(_ transcript: Transcript) {
         currentTranscript = transcript
         transcriptText = transcript.fullText
@@ -329,7 +329,7 @@ final class MainWindowViewModel: ObservableObject {
         downloadedModelIDs.contains(model.id)
     }
 
-    /// 選択中モデルがダウンロード済みの場合に削除する。
+    /// Deletes the selected model if it has been downloaded.
     func deleteSelectedModel() {
         guard let model = settings.selectedModel,
               isModelDownloaded(model) else { return }
@@ -347,7 +347,7 @@ final class MainWindowViewModel: ObservableObject {
         }
     }
 
-    /// モデルの使用ディスク容量を表示用テキストで返す。未ダウンロードの場合は nil。
+    /// Returns the model's disk usage as display text. nil if not downloaded.
     func modelDiskUsageText(_ model: ModelOption) -> String? {
         guard isModelDownloaded(model) else { return nil }
         let bytes = modelAvailability.diskUsage(whisperKitModelName: model.whisperKitModelName)
@@ -424,8 +424,8 @@ final class MainWindowViewModel: ObservableObject {
             .isEmpty == false
     }
 
-    /// 編集モードで内容が元の文字起こしから変わっているかを表す。
-    /// ウィンドウ終了・ファイル差し替え前に確認するための dirty 状態。
+    /// Indicates whether the content in edit mode has changed from the original transcript.
+    /// Dirty state checked before closing the window or replacing the file.
     var hasUnsavedChanges: Bool {
         guard let transcript = currentTranscript else { return false }
         let normalizedEdited = transcriptText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -434,7 +434,7 @@ final class MainWindowViewModel: ObservableObject {
     }
 
     func selectFile(url: URL, preferredFileName: String? = nil) {
-        // 文字起こし・モデルダウンロード中のファイル差し替えは禁止する。
+        // Replacing the file during transcription or model download is not allowed.
         guard !isBusy else {
             AppLogger.info("File selection ignored while busy", logger: AppLogger.fileAccess)
             return
@@ -487,8 +487,8 @@ final class MainWindowViewModel: ObservableObject {
         }
     }
 
-    /// ファイル差し替え時に、Imports/ 内に残った旧 sandbox コピーを削除する。
-    /// 削除対象は薄い sandbox コピー（AppDirectories.importsDirectory 配下）のみに限定する。
+    /// When replacing the file, deletes the old sandbox copy left in Imports/.
+    /// Deletion is limited to thin sandbox copies (under AppDirectories.importsDirectory).
     private func removePreviousSandboxCopyIfNeeded() {
         guard let previousURL = selectedFile?.url else { return }
         let importsPath = AppDirectories.importsDirectory.standardizedFileURL.path
@@ -627,7 +627,7 @@ final class MainWindowViewModel: ObservableObject {
         }
     }
 
-    /// 文字起こしのみをキャンセルする（モデルDLは対象外）。
+    /// Cancels transcription only (not model downloads).
     func cancelTranscription() {
         if let jobID = activeJobID {
             Task { await transcriber.cancel(jobID: jobID) }
@@ -642,7 +642,7 @@ final class MainWindowViewModel: ObservableObject {
         lastAnnouncedPhase = nil
     }
 
-    /// モデルダウンロードのみをキャンセルする（文字起こしは対象外）。
+    /// Cancels model download only (not transcription).
     func cancelModelDownload() {
         modelDownloadTask?.cancel()
         modelDownloadTask = nil
@@ -655,21 +655,21 @@ final class MainWindowViewModel: ObservableObject {
         ).post()
     }
 
-    /// Full Text 編集内容を currentTranscript の fullText と同期する。
-    /// segment の text が空の場合は、編集後の全文を反映する。
+    /// Syncs Full Text edits with currentTranscript's fullText.
+    /// If a segment's text is empty, applies the edited full text.
     func updateTranscriptText(_ newText: String) {
         transcriptText = newText
         guard var transcript = currentTranscript else { return }
         transcript.fullText = newText
-        // 全編集中に segment 表示へ戻っても食い違わないよう、
-        // セグメントが1つしかない（全文を1セグメントで保持している）場合は text も同期する。
+        // So the segment view does not diverge when switching back from full-text editing,
+        // also sync text when there is only one segment (the full text is held in a single segment).
         if transcript.segments.count == 1 {
             transcript.segments[0].text = newText
         }
         currentTranscript = transcript
     }
 
-    /// セグメントのテキストを更新し、currentTranscript と全文に同期する。
+    /// Updates a segment's text and syncs it to currentTranscript and the full text.
     func updateSegmentText(id: UUID, text: String) {
         guard var transcript = currentTranscript else { return }
         if let index = transcript.segments.firstIndex(where: { $0.id == id }) {
@@ -729,7 +729,7 @@ final class MainWindowViewModel: ObservableObject {
         }
     }
 
-    /// 現在の再生位置とセグメント長から残り時間を表示する。
+    /// Displays the remaining time from the current playback position and the segment length.
     func updatePlaybackPosition(current: TimeInterval, duration: TimeInterval) {
         playbackPositionText = Self.remainingTimeText(current: current, duration: duration)
     }
@@ -759,7 +759,7 @@ final class MainWindowViewModel: ObservableObject {
     func exportTranscript(format: ExportFormat) {
         guard var transcript = currentTranscript else { return }
         transcript.fullText = transcriptText
-        // エクスポート時（最新の編集内容を反映）に updatedAt を更新し、編集済み状態を記録する。
+        // On export (reflecting the latest edits), update updatedAt and record the edited state.
         transcript.updatedAt = Date()
         currentTranscript = transcript
 
@@ -791,7 +791,7 @@ final class MainWindowViewModel: ObservableObject {
         )
         guard let url else { return }
 
-        // 成功時に次回の初期ディレクトリとして bookmark を保存する
+        // On success, save the bookmark as the initial directory for next time
         fileAccess.saveLastExportDirectoryBookmark(for: url.deletingLastPathComponent())
 
         do {
@@ -936,9 +936,9 @@ final class MainWindowViewModel: ObservableObject {
     private func handleError(_ error: Error, context: ErrorContext) {
         let message = ErrorMapper.userMessage(for: error)
 
-        // ログには元エラー（技術詳細）を記録し、ユーザー向けメッセージとは分離する。
-        // 元エラーが AppError.transcriptionFailedWithReason / AppError.exportFailedWithReason の
-        // 場合は元の reason を、それ以外は error 自体を記録する。
+        // Log the underlying error (technical details), kept separate from the user-facing message.
+        // If the underlying error is AppError.transcriptionFailedWithReason / AppError.exportFailedWithReason,
+        // log the original reason; otherwise log the error itself.
         let logError: Error
         if let appError = error as? AppError {
             switch appError {
@@ -963,7 +963,7 @@ final class MainWindowViewModel: ObservableObject {
                 action: info.action
             )
         }
-        // キャンセル・失敗も VoiceOver で通知する
+        // Also announce cancellation and failure via VoiceOver
         AccessibilityNotification.Announcement(message).post()
     }
 
@@ -1057,7 +1057,7 @@ import UniformTypeIdentifiers
 
 // MARK: - Save panel abstraction
 
-/// NSSavePanel の生成・表示を抽象化する。テストで差し替え可能にする。
+/// Abstracts creating and showing NSSavePanel so it can be replaced in tests.
 protocol SavePanelPresenting {
     func presentSavePanel(defaultFileName: String, allowedContentTypes: [UTType], initialDirectoryURL: URL?) -> URL?
 }

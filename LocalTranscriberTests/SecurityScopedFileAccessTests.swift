@@ -40,7 +40,7 @@ final class SecurityScopedFileAccessTests: XCTestCase {
     }
 
     func testEndAccessIsNoOpForUnknownURL() {
-        // 開始していないURLへの endAccess はクラッシュせず何もしない
+        // endAccess on a URL that was never started does not crash and does nothing
         let url = tempRoot.appendingPathComponent("not-started.wav")
         FileManager.default.createFile(atPath: url.path, contents: Data("x".utf8))
         access.endAccess(url: url)
@@ -49,7 +49,7 @@ final class SecurityScopedFileAccessTests: XCTestCase {
 
     func testEndAllAccessIsSafeWhenNothingStarted() {
         access.endAllAccess()
-        // 何も開始していなくても例外を投げない
+        // Does not throw even if nothing was started
         XCTAssertTrue(true)
     }
 

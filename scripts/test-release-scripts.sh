@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release / Pages 用スクリプトの自動テスト。
+# Automated tests for the Release / Pages scripts.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

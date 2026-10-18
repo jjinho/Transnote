@@ -9,7 +9,7 @@ struct ToastMessage: Identifiable {
 
 extension ToastMessage: Equatable {
     static func == (lhs: ToastMessage, rhs: ToastMessage) -> Bool {
-        // `handler` はクロージャのため比較できないので無視する
+        // `handler` is a closure and cannot be compared, so it is ignored
         lhs.id == rhs.id
             && lhs.text == rhs.text
             && lhs.icon == rhs.icon
