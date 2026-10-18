@@ -2976,6 +2976,38 @@
           }
         }
       }
+    },
+    "%@、%@、%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@, %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、%@、%@"
+          }
+        }
+      }
+    },
+    "信頼度の低い単語: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low-confidence words: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信頼度の低い単語: %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

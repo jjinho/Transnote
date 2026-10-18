@@ -48,6 +48,68 @@ final class TranscriptModelTests: XCTestCase {
         XCTAssertNotNil(segment.id)
     }
 
+    // MARK: - Word confidence
+
+    private let sampleWords = [
+        TranscriptWord(text: "Hello", startTime: 0.0, endTime: 0.4, probability: 0.97),
+        TranscriptWord(text: "Hollis", startTime: 0.4, endTime: 0.9, probability: 0.42)
+    ]
+
+    func testSegmentWordsSurviveJSONRoundTrip() throws {
+        let segment = TranscriptSegment(startTime: 0, endTime: 0.9, text: "Hello Hollis", words: sampleWords)
+
+        let data = try JSONEncoder().encode(segment)
+        let decoded = try JSONDecoder().decode(TranscriptSegment.self, from: data)
+
+        XCTAssertEqual(decoded.words, sampleWords)
+    }
+
+    func testSegmentSavedBeforeWordScoresDecodesWithoutWords() throws {
+        let json = """
+        {"id": "\(UUID().uuidString)", "startTime": 0, "endTime": 1, "text": "hello"}
+        """
+
+        let decoded = try JSONDecoder().decode(TranscriptSegment.self, from: Data(json.utf8))
+
+        XCTAssertNil(decoded.words)
+        XCTAssertTrue(decoded.lowConfidenceWords.isEmpty)
+    }
+
+    func testSegmentWithoutWordsOmitsWordsKeyFromJSON() throws {
+        let segment = TranscriptSegment(startTime: 0, endTime: 1, text: "hello")
+
+        let json = String(decoding: try JSONEncoder().encode(segment), as: UTF8.self)
+
+        XCTAssertFalse(json.contains("words"))
+    }
+
+    func testEditingSegmentTextClearsWords() {
+        var segment = TranscriptSegment(startTime: 0, endTime: 0.9, text: "Hello Hollis", words: sampleWords)
+
+        segment.text = "Hello Hollis"
+        XCTAssertEqual(segment.words, sampleWords, "Assigning identical text keeps the scores")
+
+        segment.text = "Hello Holly"
+        XCTAssertNil(segment.words)
+    }
+
+    func testLowConfidenceWordsAreThoseBelowThreshold() {
+        let atThreshold = TranscriptWord(
+            text: "maybe",
+            startTime: 0.9,
+            endTime: 1.2,
+            probability: TranscriptWord.lowConfidenceThreshold
+        )
+        let segment = TranscriptSegment(
+            startTime: 0,
+            endTime: 1.2,
+            text: "Hello Hollis maybe",
+            words: sampleWords + [atThreshold]
+        )
+
+        XCTAssertEqual(segment.lowConfidenceWords.map(\.text), ["Hollis"])
+    }
+
     func testExportFormatFileExtensions() {
         XCTAssertEqual(ExportFormat.markdown.fileExtension, "md")
         XCTAssertEqual(ExportFormat.srt.fileExtension, "srt")

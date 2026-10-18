@@ -172,10 +172,18 @@ struct TranscriptSegment: Codable, Identifiable {
     let startTime: TimeInterval
     let endTime: TimeInterval
     var text: String
+    var words: [TranscriptWord]?  // nil once the text is edited
+}
+
+struct TranscriptWord: Codable {
+    let text: String
+    let startTime: TimeInterval
+    let endTime: TimeInterval
+    let probability: Double       // model confidence, 0–1
 }
 ```
 
-Subtitle editing that requires word-level timestamps can wait until v1.1 or later. The WhisperKit documentation presents word-level timestamps as a key feature, but segment-level granularity is sufficient for the MVP. ([Mintlify][2])
+Transcription requests WhisperKit's word-level timestamps (`DecodingOptions.wordTimestamps`), and each segment keeps its words with timings and a confidence score. The score is the geometric mean of the word's token probabilities: it shows how sure the model was, not whether the word is correct. Words below 0.5 are flagged in the segment view, and the JSON export (schema version 2) includes every word. For Japanese and Chinese, WhisperKit splits text into roughly one unit per character, not per word. Subtitle editing at word level can wait until v1.1 or later. ([Mintlify][2])
 
 ## Screen design
 

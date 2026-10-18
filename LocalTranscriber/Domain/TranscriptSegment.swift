@@ -1,21 +1,54 @@
 import Foundation
 
+/// A recognized word with its timing and the model's confidence in it.
+struct TranscriptWord: Codable, Equatable, Sendable {
+    /// Words scoring below this are flagged for review in the editor.
+    static let lowConfidenceThreshold = 0.5
+
+    let text: String
+    let startTime: TimeInterval
+    let endTime: TimeInterval
+    /// Model confidence from 0 to 1: the geometric mean of the word's token probabilities.
+    /// It shows how sure the model was, not whether the word is correct.
+    let probability: Double
+
+    var isLowConfidence: Bool {
+        probability < Self.lowConfidenceThreshold
+    }
+}
+
 struct TranscriptSegment: Codable, Identifiable, Sendable {
     let id: UUID
     let startTime: TimeInterval
     let endTime: TimeInterval
-    var text: String
+    var text: String {
+        // Word scores describe the recognized text, so they no longer apply once it is edited.
+        didSet {
+            if text != oldValue {
+                words = nil
+            }
+        }
+    }
+    /// Per-word timing and confidence. nil when the model produced no word timings,
+    /// for transcripts saved before scores were recorded, and after the text is edited.
+    var words: [TranscriptWord]?
 
     init(
         id: UUID = UUID(),
         startTime: TimeInterval,
         endTime: TimeInterval,
-        text: String
+        text: String,
+        words: [TranscriptWord]? = nil
     ) {
         self.id = id
         self.startTime = startTime
         self.endTime = endTime
         self.text = text
+        self.words = words
+    }
+
+    var lowConfidenceWords: [TranscriptWord] {
+        words?.filter(\.isLowConfidence) ?? []
     }
 
     var formattedStartTime: String {

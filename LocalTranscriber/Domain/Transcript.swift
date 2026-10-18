@@ -3,7 +3,8 @@ import Foundation
 struct Transcript: Codable, Identifiable, Sendable {
     /// Schema version of the JSON export.
     /// Increment when fields are added in the future.
-    static let currentSchemaVersion = 1
+    /// 2: segments carry optional per-word timing and confidence (`words`).
+    static let currentSchemaVersion = 2
 
     let id: UUID
     let sourceFileName: String

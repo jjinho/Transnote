@@ -49,6 +49,7 @@ See [docs/install.md](docs/install.md) for details.
 | UI languages | Japanese and American English (follows the macOS language setting; other languages fall back to English) |
 | Progress display / cancel | Shows each phase, from preparing to transcribing |
 | View / edit / copy results | Transcripts can be edited in place |
+| Word confidence scores | Per-word confidence (0–1) in the JSON export; low-confidence words flagged in the segment view |
 | Segment playback | Plays audio for timestamped segments |
 | Export | TXT / Markdown / JSON / SRT / VTT |
 | Update check | Checks GitHub Releases at launch |

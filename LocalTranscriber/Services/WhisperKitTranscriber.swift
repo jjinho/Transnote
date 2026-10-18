@@ -106,15 +106,14 @@ actor WhisperKitTranscriber: Transcriber {
             // Process long audio in chunks (to avoid feeding it to WhisperKit all at once).
             let chunks = await splitAudioIntoChunks(url: job.audioFileURL, chunkDuration: job.chunkDuration)
             var allResults: [TranscriptionResult] = []
-            var processedSeconds: TimeInterval = 0
             var totalSeconds: TimeInterval = chunks.count > 1
                 ? (try? await AVURLAsset(url: job.audioFileURL).load(.duration).seconds) ?? Double(chunks.count)
                 : Double(chunks.count)
 
-            for (index, chunkURL) in chunks.enumerated() {
+            for (index, chunk) in chunks.enumerated() {
                 try Task.checkCancellation()
                 let results = try await whisperKit.transcribe(
-                    audioPath: chunkURL.path,
+                    audioPath: chunk.url.path,
                     decodeOptions: decodeOptions,
                     callback: { progress in
                         let localFraction = whisperKit.progress.fractionCompleted
@@ -132,8 +131,12 @@ actor WhisperKitTranscriber: Transcriber {
                         return !Task.isCancelled
                     }
                 )
+                // Each chunk is transcribed from 0:00, and merging does not shift timestamps,
+                // so move them onto the source file's timeline here.
+                for result in results {
+                    result.segments = Self.offsetSegments(result.segments, by: chunk.startTime)
+                }
                 allResults.append(contentsOf: results)
-                processedSeconds += (try? await AVURLAsset(url: chunkURL).load(.duration).seconds) ?? 0
             }
 
             try Task.checkCancellation()
@@ -274,17 +277,18 @@ actor WhisperKitTranscriber: Transcriber {
     }
 
 
-    /// Splits long audio into the given chunk length and returns temporary files.
-    /// Returns the original file if splitting is unnecessary (already within the chunk length).
-    private func splitAudioIntoChunks(url: URL, chunkDuration: TimeInterval) async -> [URL] {
-        guard chunkDuration > 0 else { return [url] }
+    /// Splits long audio into the given chunk length and returns temporary files, each with its start time
+    /// in the source file. Returns the original file if splitting is unnecessary (already within the chunk length).
+    /// A chunk that fails to export is skipped, so start times are recorded rather than derived from list position.
+    private func splitAudioIntoChunks(url: URL, chunkDuration: TimeInterval) async -> [(url: URL, startTime: TimeInterval)] {
+        guard chunkDuration > 0 else { return [(url, 0)] }
         let asset = AVURLAsset(url: url)
         guard let duration = try? await asset.load(.duration).seconds, duration > chunkDuration else {
-            return [url]
+            return [(url, 0)]
         }
 
         let chunkCount = Int(ceil(duration / chunkDuration))
-        var outputURLs: [URL] = []
+        var chunks: [(url: URL, startTime: TimeInterval)] = []
         for index in 0..<chunkCount {
             let start = Double(index) * chunkDuration
             let end = min(start + chunkDuration, duration)
@@ -302,10 +306,10 @@ actor WhisperKitTranscriber: Transcriber {
             export?.exportAsynchronously { semaphore.signal() }
             semaphore.wait()
             if export?.status == .completed {
-                outputURLs.append(outputURL)
+                chunks.append((outputURL, start))
             }
         }
-        return outputURLs.isEmpty ? [url] : outputURLs
+        return chunks.isEmpty ? [(url, 0)] : chunks
     }
 
     private func makeDecodingOptions(languageID: String, vadEnabled: Bool = false) -> DecodingOptions {
@@ -316,15 +320,52 @@ actor WhisperKitTranscriber: Transcriber {
                 language: languageID,
                 usePrefillPrompt: true,
                 detectLanguage: false,
-                skipSpecialTokens: true
+                skipSpecialTokens: true,
+                wordTimestamps: true
             )
         }
         return DecodingOptions(
             language: nil,
             usePrefillPrompt: false,
             detectLanguage: true,
-            skipSpecialTokens: true
+            skipSpecialTokens: true,
+            wordTimestamps: true
         )
+    }
+
+    /// Shifts segment and word timestamps later by `offset` seconds.
+    static func offsetSegments(_ segments: [TranscriptionSegment], by offset: TimeInterval) -> [TranscriptionSegment] {
+        guard offset != 0 else { return segments }
+        let shift = Float(offset)
+        return segments.map { segment in
+            var shifted = segment
+            shifted.start += shift
+            shifted.end += shift
+            shifted.words = segment.words?.map { word in
+                var shiftedWord = word
+                shiftedWord.start += shift
+                shiftedWord.end += shift
+                return shiftedWord
+            }
+            return shifted
+        }
+    }
+
+    /// Converts WhisperKit word timings, dropping entries that are empty once whitespace and
+    /// special-token artifacts are removed. Returns nil when there are no words to keep.
+    static func mapWords(_ words: [WordTiming]?) -> [TranscriptWord]? {
+        let mapped = (words ?? []).compactMap { word -> TranscriptWord? in
+            let text = TranscriptTextSanitizer.sanitize(word.word)
+            guard !text.isEmpty else { return nil }
+            return TranscriptWord(
+                text: text,
+                startTime: TimeInterval(word.start),
+                endTime: TimeInterval(word.end),
+                // Three decimals is more precision than the score carries, and keeps Float noise out of exported JSON.
+                probability: (Double(word.probability) * 1000).rounded() / 1000
+            )
+        }
+        return mapped.isEmpty ? nil : mapped
     }
 
     private static func decodeWordTokens(_ tokens: [Int], using tokenizer: WhisperTokenizer) -> String {
@@ -342,7 +383,8 @@ actor WhisperKitTranscriber: Transcriber {
         return TranscriptSegment(
             startTime: TimeInterval(segment.start),
             endTime: TimeInterval(segment.end),
-            text: text
+            text: text,
+            words: mapWords(segment.words)
         )
     }
 
@@ -350,7 +392,8 @@ actor WhisperKitTranscriber: Transcriber {
         TranscriptSegment(
             startTime: TimeInterval(segment.start),
             endTime: TimeInterval(segment.end),
-            text: TranscriptTextSanitizer.presentableText(from: segment.text) ?? ""
+            text: TranscriptTextSanitizer.presentableText(from: segment.text) ?? "",
+            words: mapWords(segment.words)
         )
     }
 
